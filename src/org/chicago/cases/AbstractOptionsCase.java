@@ -29,8 +29,6 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 			
 			void newForecastMessage(ForecastMessage msg);
 			
-			
-			
 		}
 		
 		public static enum MsgType {
