@@ -3,7 +3,7 @@ package org.chicago.cases.marketdata;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 
-import org.chicago.cases.teams.TeamUtilities;
+import org.chicago.cases.utils.TeamUtilities;
 
 public class MarketDataGenerator {
 	

@@ -2,8 +2,9 @@ package org.chicago.cases.marketdata;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
+import java.util.List;
 
-import org.chicago.cases.teams.InstrumentUtilities;
+import org.chicago.cases.utils.InstrumentUtilities;
 
 public class InstrumentsGenerator {
 	
@@ -13,7 +14,7 @@ public class InstrumentsGenerator {
 		
 		try {
 			BufferedWriter bw = new BufferedWriter(new FileWriter(FILE_PATH));
-			String[] instruments = InstrumentUtilities.getInstrumentsForAllTeams();
+			List<String> instruments = InstrumentUtilities.getAllInstrumentsForAllTeams();
 			for (String instrument : instruments) {
 				bw.write(instrument + ",0.01");
 				bw.newLine();

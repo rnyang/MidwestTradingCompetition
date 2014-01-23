@@ -1,4 +1,4 @@
-package org.chicago.cases.teams;
+package org.chicago.cases.utils;
 
 public class TeamUtilities {
 	

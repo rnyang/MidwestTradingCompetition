@@ -1,6 +1,6 @@
 
 
-import org.chicago.cases.teams.TeamUtilities;
+import org.chicago.cases.utils.TeamUtilities;
 
 import com.optionscity.freeway.api.AbstractJob;
 import com.optionscity.freeway.api.IContainer;

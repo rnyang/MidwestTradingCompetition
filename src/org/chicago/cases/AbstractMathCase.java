@@ -1,8 +1,11 @@
 package org.chicago.cases;
 
 import java.util.Date;
+import java.util.List;
 
-import org.chicago.cases.teams.TeamUtilities;
+import org.chicago.cases.utils.InstrumentUtilities;
+import org.chicago.cases.utils.TeamUtilities;
+import org.chicago.cases.utils.InstrumentUtilities.Case;
 
 import com.optionscity.freeway.api.AbstractJob;
 import com.optionscity.freeway.api.IContainer;
@@ -75,17 +78,19 @@ public abstract class AbstractMathCase extends AbstractJob {
 		if (!TeamUtilities.validateTeamCode(teamCode))
 			container.stopJob("The specified Team Code is not a valid code.  Please enter the code provided to your team.");
 		
-		for (String team : TeamUtilities.TEAMS) {
-			log("Starting symbol for " + (team + PRODUCT));
-			instruments().startSymbol(team + PRODUCT);
+		log("Team Code is, " + teamCode);
+		
+		List<String> products = InstrumentUtilities.getSymbolsForTeamByCase(Case.MATH, teamCode);
+		for (String product : products) {
+			instruments().startSymbol(product);
+			container.filterMarketMessages(product + ";;;;;;");
+			log("filtering for " + product);
 		}
+	
 		
 		container.subscribeToMarketBidAskMessages();
 		container.subscribeToTradeMessages();
-		
-		log("Team Code is, " + teamCode);
-		log("filtering for " + teamCode + PRODUCT + "-E");
-		container.filterMarketMessages(teamCode + PRODUCT + "-E" + ";;;;;;");
+		container.subscribeToSignals();
 		container.filterOnlyMyTrades(true);
 		
 		implementation = getMathCaseImplementation();

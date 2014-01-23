@@ -7,7 +7,7 @@ import com.optionscity.freeway.api.IJobSetup;
 
 public class ExampleMathCaseImplementation extends AbstractMathCase {
 	
-	class MySampleImplementation implements MathCase {
+	class MySampleMathImplementation implements MathCase {
 		
 		private IDB myDatabase;
 		int factor;
@@ -36,7 +36,7 @@ public class ExampleMathCaseImplementation extends AbstractMathCase {
 
 	@Override
 	public MathCase getMathCaseImplementation() {
-		return new MySampleImplementation();
+		return new MySampleMathImplementation();
 	}
 
 }
