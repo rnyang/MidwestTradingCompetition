@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<project name="uofc" default="all">
+
+    <target name="all" depends="clean, init, compile, package"/>
+
+    <target name="init">
+	<mkdir dir="build"/>
+	<mkdir dir="build/prod"/>
+	<mkdir dir="build/artifacts"/>
+    </target>
+
+    <target name="clean">
+        <delete dir="build"/>
+    </target>
+
+    <target name="compile" depends="init">
+        <javac nowarn="on" fork="true" srcdir="${basedir}/src" destdir="build/prod" memoryInitialSize="512m" memorymaximumsize="768m" debug="true" optimize="on" >
+            <compilerarg value="-Xlint:all"/>
+            <classpath>
+                <pathelement location="libs"/>
+		<fileset dir="${basedir}/libs">
+            	   <include name="**/*.jar"/>
+        	</fileset>
+            </classpath>
+        </javac>
+    </target>
+
+    <target name="package">
+       <jar destfile="build/artifacts/cases-core.jar">
+	   <fileset dir="build/prod/" includes="org/chicago/**"/>
+      </jar>
+    </target>
+
+</project>

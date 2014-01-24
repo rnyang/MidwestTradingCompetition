@@ -10,7 +10,7 @@ import org.chicago.cases.utils.InstrumentUtilities.Case;
 
 public class MathCaseMarketDataGenerator {
 	
-	private static final String FILE_PATH = "/home/bsandman/options.csv";
+	private static final String FILE_PATH = "/home/bsandman/math.csv";
 	private static final int DATA_POINTS = 100;
 	private static final long INTERVAL = 1000;
 	private static final int QUANTITY = 100;
