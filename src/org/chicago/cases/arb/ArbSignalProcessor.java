@@ -16,15 +16,22 @@ public class ArbSignalProcessor implements ISignalProcessor {
 	@Override
 	public Signal fromString(String signalString) {
 		String[] parts = signalString.split(";");
-		if (parts.length < 6)
+		if (parts.length < 1)
 			throw new IllegalStateException("Invalid number of fields in signal String");
-		double robotBid = Double.parseDouble(parts[1]);
-		double robotAsk = Double.parseDouble(parts[2]);
-		Quote robotQuote = new Quote(Exchange.ROBOT, robotBid, Integer.MAX_VALUE, robotAsk, Integer.MAX_VALUE);
-		double snowBid = Double.parseDouble(parts[4]);
-		double snowAsk = Double.parseDouble(parts[5]);
-		Quote snowQuote = new Quote(Exchange.SNOW, snowBid, Integer.MAX_VALUE, snowAsk, Integer.MAX_VALUE);
-		return new TopOfBookUpdate(snowQuote, robotQuote);
+		if (parts[0].equal("ORDER")){
+			// 1 = Customer Buy, 2 = Customer Sell
+			CustomerSide side = Int.parseInt(parts[1]);
+			double price = Double.parseDouble(parts[2]);
+			return new CustomerOrder(side,price);
+		}else if (parts[0].equal("BOOKUPDATE")){
+			double robotBid = Double.parseDouble(parts[1]);
+			double robotAsk = Double.parseDouble(parts[2]);
+			Quote robotQuote = new Quote(Exchange.ROBOT, robotBid, Integer.MAX_VALUE, robotAsk, Integer.MAX_VALUE);
+			double snowBid = Double.parseDouble(parts[4]);
+			double snowAsk = Double.parseDouble(parts[5]);
+			Quote snowQuote = new Quote(Exchange.SNOW, snowBid, Integer.MAX_VALUE, snowAsk, Integer.MAX_VALUE);
+			return new TopOfBookUpdate(snowQuote, robotQuote);
+		}
 	}
 
 }

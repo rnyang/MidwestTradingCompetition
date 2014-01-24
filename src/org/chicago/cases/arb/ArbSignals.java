@@ -18,4 +18,15 @@ public class ArbSignals {
 		
 	}
 
+	public static class CustomerOrder extends Signal {
+
+		public final CustomerSide side;
+		public final double price;
+
+		public CustomerOrder(CustomerSide, double Price) {
+			super(CustomerOrder.class.getSimpleName());
+			this.side = side;
+			this.pricee = price;
+		}
+	}
 }

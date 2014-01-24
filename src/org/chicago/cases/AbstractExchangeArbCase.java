@@ -29,6 +29,10 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 			SNOW, ROBOT
 		}
 		
+		public static enum CustomerSide {
+			CUSTOMERBUY, CUSTOMERSELL
+		}
+
 		public static interface ArbCase {
 			
 			void addVariables(IJobSetup setup);
@@ -47,6 +51,11 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 			
 		}
 		
+		// STATE VARIABLES
+		private int tick;
+		private double algo_bid;
+		private double algo_ask;
+
 		// ----------- Handle System Events and Translate to Case Interface Methods ---------------
 		
 		private IDB teamDB;
@@ -104,6 +113,7 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 			
 			teamDB = container.getDB(teamCode);
 			implementation.initializeAlgo(teamDB);
+			tick = 0;
 		}
 
 		
@@ -113,6 +123,23 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 			quotes[0] = signal.snowQuote;
 			quotes[1] = signal.robotQuote;
 			implementation.newTopOfBook(quotes);
+
+			t++;
+			if(t%5 == 0){
+				refreshQuotes();
+			}
 		}
 
+		public void onSignal(CustomerOrder signal) {
+			log("Received CustomerOrder");
+			// logic for processing order here
+			/*
+					
+			*/
+			implementation.newTopOfBook(quotes);
+		}
+
+		public void processOrder(){
+			// process order
+		}
 }
