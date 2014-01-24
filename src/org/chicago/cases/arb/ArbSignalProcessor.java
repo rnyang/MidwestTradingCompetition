@@ -19,10 +19,11 @@ public class ArbSignalProcessor implements ISignalProcessor {
 		if (parts.length < 1)
 			throw new IllegalStateException("Invalid number of fields in signal String");
 		if (parts[0].equal("ORDER")){
-			// 1 = Customer Buy, 2 = Customer Sell
-			CustomerSide side = Int.parseInt(parts[1]);
-			double price = Double.parseDouble(parts[2]);
-			return new CustomerOrder(side,price);
+			// 0 = Customer Buy, 1 = Customer Sell
+			Exchange exchange = Int.parseInt(parts[1]);
+			CustomerSide side = Int.parseInt(parts[2]);
+			double price = Double.parseDouble(parts[3]);
+			return new CustomerOrder(exchange,side,price);
 		}else if (parts[0].equal("BOOKUPDATE")){
 			double robotBid = Double.parseDouble(parts[1]);
 			double robotAsk = Double.parseDouble(parts[2]);
