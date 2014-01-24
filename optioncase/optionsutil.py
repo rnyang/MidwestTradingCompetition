@@ -52,15 +52,17 @@ def ImpliedP(S, K, t, r, price):
         veg = Vega(S, K, t, r, imply)
         y = Put(S, K, t, r, imply)
     return imply
-
+'''
 r =.005
-aapl = 540.33
-x = ImpliedC(aapl,605,69/365,r,6)
+yhoo = 39.52
+strike = 40
+t = 3/365
+x = ImpliedC(yhoo,strike,t,r,.29)
 print x
 
-d = Delta(aapl,605,69/365,r,x)
+d = Delta(yhoo,strike,t,r,x)
 print d
-
+'''
 
 
 
