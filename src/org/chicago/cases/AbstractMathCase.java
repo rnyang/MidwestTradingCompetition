@@ -44,7 +44,6 @@ public abstract class AbstractMathCase extends AbstractJob {
 	
 	private IDB teamDB;
 	private MathCase implementation;
-	private static final String PRODUCT = "-CASE3";
 	
 	/*
 	 * Freeway has its own events that are likely too complex for the student's to work out in one month.
