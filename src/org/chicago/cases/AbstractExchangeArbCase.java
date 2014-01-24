@@ -1,10 +1,14 @@
 package org.chicago.cases;
 
 import java.util.List;
+import java.util.Queue;
+import java.util.LinkedList;
+import java.lang.Math;
 
 import org.chicago.cases.arb.ArbSignalProcessor;
 import org.chicago.cases.arb.ArbSignals.TopOfBookUpdate;
 import org.chicago.cases.arb.Quote;
+import org.chicago.cases.arb.QueueEvent;
 import org.chicago.cases.utils.InstrumentUtilities;
 import org.chicago.cases.utils.InstrumentUtilities.Case;
 import org.chicago.cases.utils.TeamUtilities;
@@ -33,6 +37,10 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 			CUSTOMERBUY, CUSTOMERSELL
 		}
 
+		public static enum AlgoSide {
+			ALGOBUY, ALGOSELL
+		}
+
 		public static interface ArbCase {
 			
 			void addVariables(IJobSetup setup);
@@ -41,7 +49,7 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 			
 			void initialize(Quote[] startingQuotes);
 			
-			void fillNotice(Exchange exchange, double price, int quantity);
+			void fillNotice(Exchange exchange, double price);
 			
 			void positionPenalty(int clearedQuantity, double price);
 			
@@ -53,8 +61,10 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 		
 		// STATE VARIABLES
 		private int tick;
-		private double algo_bid;
-		private double algo_ask;
+		private Quote[] algoQuotes;
+		private int pos;
+		private Queue<QueueItem> queue;
+		private Quote[] latestTOB;
 
 		// ----------- Handle System Events and Translate to Case Interface Methods ---------------
 		
@@ -113,33 +123,105 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 			
 			teamDB = container.getDB(teamCode);
 			implementation.initializeAlgo(teamDB);
+
+
+			// My code
 			tick = 0;
+			Queue<QueueItem> queue = new LinkedList();
 		}
 
 		
 		public void onSignal(TopOfBookUpdate signal) {
+			// Next Tick
+			tick++;
+
+			// Send market updates to algo (lagged)
 			log("Received TOB update");
 			Quote[] quotes = new Quote[2];
 			quotes[0] = signal.snowQuote;
 			quotes[1] = signal.robotQuote;
-			implementation.newTopOfBook(quotes);
+			TOBUpdate tobupdate = TOBUpdate(this.tick+5, quotes);
+			this.queue.add(tobupdate)
 
-			t++;
-			if(t%5 == 0){
-				refreshQuotes();
+			// Process market-crossing orders
+			for (Quote quote : quotes) {
+				if(this.algoQuotes[quote.exchange].bid > quote.ask){
+					processOrder(ALGOBUY,this.algoQuotes[signal.exchange].bid);
+				}else if(this.algoQuotes[quote.exchange].ask < quote.bid){
+					processOrder(ALGOSELL,this.algoQuotes[signal.exchange].ask);
+				}
+			}
+
+			// Ask for new quotes
+			if(tick%5 == 0){
+				this.algoQuotes = refreshQuotes();
 			}
 		}
 
 		public void onSignal(CustomerOrder signal) {
 			log("Received CustomerOrder");
-			// logic for processing order here
-			/*
-					
-			*/
-			implementation.newTopOfBook(quotes);
+			if(signal.side == CUSTOMERBUY){
+				if(signal.price > this.algoQuotes[signal.exchange].ask){
+					processOrder(ALGOSELL,this.algoQuotes[signal.exchange].ask);
+				}
+			}else if(signal.side == CUSTOMERSELL){
+				if(signal.price < this.algoQuotes[signal.exchange].bid){
+					processOrder(ALGOBUY,this.algoQuotes[signal.exchange].bid);
+				}
+			}
 		}
 
-		public void processOrder(){
-			// process order
+		public void processOrder(AlgoSide side, double price){
+			if(side == ALGOBUY){
+				long id = trades().manualTrade(SOMEINSTRUMENT,				// Instruments PLEASE HELP
+					 result,
+					 price,
+					 com.optionscity.freeway.api.Order.Side.BUY,
+					 new Date(),
+					 null, null, null, null, null, null);
+				pos += 1;
+			}else if(side == ALGOSELL){
+				long id = trades().manualTrade(SOMEINSTRUMENT,				// Instruments PLEASE HELP
+					 result,
+					 price,
+					 com.optionscity.freeway.api.Order.Side.SELL,
+					 new Date(),
+					 null, null, null, null, null, null);
+				pos += 1;
+			}
+
+			checkPenalty();
+		}
+
+		public void checkPenalty(){
+			if(this.pos > 200){
+				long id = trades().manualTrade(SOMEINSTRUMENT,				// Instruments PLEASE HELP
+					 this.pos-200,
+					 Math.min(this.latestTOB[0].bid,this.latestTOB[1].bid)*0.8,
+					 com.optionscity.freeway.api.Order.Side.SELL,
+					 new Date(),
+					 null, null, null, null, null, null);
+				this.pos = 200;
+			}
+			if(this.pos < -200){
+				long id = trades().manualTrade(SOMEINSTRUMENT,				// Instruments PLEASE HELP
+					 -200-this.pos,
+					 Math.min(this.latestTOB[0].ask,this.latestTOB[1].ask)*1.2,
+					 com.optionscity.freeway.api.Order.Side.BUY,
+					 new Date(),
+					 null, null, null, null, null, null);
+				this.pos = -200;
+			}
+		}		
+
+		public void processQueue(int tick){
+			while(!this.queue.isEmpty() && this.queue.peek().tick >= tick){
+				QueueEvent event = this.queue.poll();
+				if(event instanceof OrderFill){
+					implementation.fillNotice(event.exchange, event.price);
+				}else if(event instanceof TOBUpdate){
+					implementation.newTopOfBook(event.quotes);
+				}
+			}
 		}
 }
