@@ -20,7 +20,14 @@ public class ArbSignalProcessor implements ISignalProcessor {
 			throw new IllegalStateException("Invalid number of fields in signal String");
 		if (parts[0].equal("ORDER")){
 			// 0 = Customer Buy, 1 = Customer Sell
-			Exchange exchange = Int.parseInt(parts[1]);
+			Exchange exchange;
+			if(parts[1].equal("SNOW")){
+				exchange = Exchange.SNOW;
+			}else if(parts[1].equal("SNOW")){
+				exchange = Exchange.ROBOT;
+			}else{
+				throw new IllegalStateException("Unknown exchange in Customer Order");
+			}
 			CustomerSide side = Int.parseInt(parts[2]);
 			double price = Double.parseDouble(parts[3]);
 			return new CustomerOrder(exchange,side,price);
