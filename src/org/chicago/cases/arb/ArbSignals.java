@@ -1,5 +1,9 @@
 package org.chicago.cases.arb;
 
+import org.chicago.cases.AbstractExchangeArbCase.Exchange;
+import org.chicago.cases.AbstractExchangeArbCase.CustomerSide;
+import org.chicago.cases.arb.Quote;
+
 import com.optionscity.freeway.api.messages.Signal;
 
 public class ArbSignals {
