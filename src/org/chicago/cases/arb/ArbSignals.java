@@ -1,12 +1,7 @@
 package org.chicago.cases.arb;
 
-<<<<<<< HEAD
 import org.chicago.cases.AbstractExchangeArbCase.CustomerSide;
-=======
 import org.chicago.cases.AbstractExchangeArbCase.Exchange;
-import org.chicago.cases.AbstractExchangeArbCase.CustomerSide;
-import org.chicago.cases.arb.Quote;
->>>>>>> arbdev
 
 import com.optionscity.freeway.api.messages.Signal;
 
@@ -32,7 +27,7 @@ public class ArbSignals {
 		public final CustomerSide side;
 		public final double price;
 
-		public CustomerOrder(Exchange exchange, CustomerSide side, double Price) {
+		public CustomerOrder(Exchange exchange, CustomerSide side, double price) {
 			super(CustomerOrder.class.getSimpleName());
 			this.exchange = exchange;
 			this.side = side;

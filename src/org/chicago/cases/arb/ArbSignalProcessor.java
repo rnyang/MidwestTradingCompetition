@@ -45,6 +45,7 @@ public class ArbSignalProcessor implements ISignalProcessor {
 			Quote snowQuote = new Quote(Exchange.SNOW, snowBid, snowAsk);
 			return new TopOfBookUpdate(snowQuote, robotQuote);
 		}
+		return null;
 	}
 
 }

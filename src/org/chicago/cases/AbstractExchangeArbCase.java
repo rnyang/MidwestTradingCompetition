@@ -145,8 +145,8 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 			Quote[] quotes = new Quote[2];
 			quotes[0] = signal.snowQuote;
 			quotes[1] = signal.robotQuote;
-			TOBUpdate tobupdate = TOBUpdate(this.tick+5, quotes);
-			this.queue.add(tobupdate);
+			//TOBUpdate tobupdate = TOBUpdate(this.tick+5, quotes);
+			//this.queue.add(tobupdate);
 
 			// Process market-crossing orders
 			for (int i= 0;i<2;i++) {
@@ -178,7 +178,7 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 
 		public void processOrder(AlgoSide side, double price){
 			if(side == AlgoSide.ALGOBUY){
-				long id = trades().manualTrade(1234567,				// Instruments PLEASE HELP
+				long id = trades().manualTrade("",				// Instruments PLEASE HELP
 					 1,
 					 price,
 					 com.optionscity.freeway.api.Order.Side.BUY,
@@ -186,7 +186,7 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 					 null, null, null, null, null, null);
 				pos += 1;
 			}else if(side == AlgoSide.ALGOSELL){
-				long id = trades().manualTrade(1234567,				// Instruments PLEASE HELP
+				long id = trades().manualTrade("",				// Instruments PLEASE HELP
 					 1,
 					 price,
 					 com.optionscity.freeway.api.Order.Side.SELL,
@@ -200,7 +200,7 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 
 		public void checkPenalty(){
 			if(this.pos > 200){
-				long id = trades().manualTrade(1234567,				// Instruments PLEASE HELP
+				long id = trades().manualTrade("",				// Instruments PLEASE HELP
 					 this.pos-200,
 					 Math.min(this.latestTOB[0].bidPrice,this.latestTOB[1].bidPrice)*0.8,
 					 com.optionscity.freeway.api.Order.Side.SELL,
@@ -209,7 +209,7 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 				this.pos = 200;
 			}
 			if(this.pos < -200){
-				long id = trades().manualTrade(SOMEINSTRUMENT,				// Instruments PLEASE HELP
+				long id = trades().manualTrade("",				// Instruments PLEASE HELP
 					 -200-this.pos,
 					 Math.min(this.latestTOB[0].askPrice,this.latestTOB[1].askPrice)*1.2,
 					 com.optionscity.freeway.api.Order.Side.BUY,
@@ -223,9 +223,11 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 			while(!this.queue.isEmpty() && this.queue.peek().tick >= tick){
 				QueueEvent event = this.queue.poll();
 				if(event instanceof OrderFill){
-					implementation.fillNotice(event.exchange, event.price);
+					OrderFill fill = (OrderFill)event;
+					implementation.fillNotice(fill.exchange, fill.price);
 				}else if(event instanceof TOBUpdate){
-					implementation.newTopOfBook(event.quotes);
+					TOBUpdate tob = (TOBUpdate) event;
+					implementation.newTopOfBook(tob.quotes);
 				}
 			}
 		}
