@@ -32,8 +32,8 @@ public class ExampleArbCaseImplementation extends AbstractExchangeArbCase {
 		}
 
 		@Override
-		public void fillNotice(Exchange exchange, double price, int quantity) {
-			log("My quote was filled with qty of " + quantity + " at a price of " + price);
+		public void fillNotice(Exchange exchange, double price) {
+			log("My quote was filled with at a price of " + price + " on " + exchange);
 		}
 
 		@Override
@@ -51,8 +51,8 @@ public class ExampleArbCaseImplementation extends AbstractExchangeArbCase {
 		@Override
 		public Quote[] refreshQuotes() {
 			Quote[] quotes = new Quote[2];
-			quotes[0] = new Quote(Exchange.ROBOT, 100.00, 10, 102.00, 10);
-			quotes[1] = new Quote(Exchange.SNOW, 101.00, 10, 103.00, 10);
+			quotes[0] = new Quote(Exchange.ROBOT, 100.00, 102.00);
+			quotes[1] = new Quote(Exchange.SNOW, 101.00, 103.00);
 			return quotes;
 		}
 
