@@ -1,6 +1,8 @@
 package org.chicago.cases.arb;
 
+import org.chicago.cases.AbstractExchangeArbCase.CustomerSide;
 import org.chicago.cases.AbstractExchangeArbCase.Exchange;
+import org.chicago.cases.arb.ArbSignals.CustomerOrder;
 import org.chicago.cases.arb.ArbSignals.TopOfBookUpdate;
 
 import com.optionscity.freeway.api.messages.Signal;
@@ -20,7 +22,7 @@ public class ArbSignalProcessor implements ISignalProcessor {
 			throw new IllegalStateException("Invalid number of fields in signal String");
 		if (parts[0].equal("ORDER")){
 			// 1 = Customer Buy, 2 = Customer Sell
-			CustomerSide side = Int.parseInt(parts[1]);
+			CustomerSide side = Integer.parseInt(parts[1]);
 			double price = Double.parseDouble(parts[2]);
 			return new CustomerOrder(side,price);
 		}else if (parts[0].equal("BOOKUPDATE")){
