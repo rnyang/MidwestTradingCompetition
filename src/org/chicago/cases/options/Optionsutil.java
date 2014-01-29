@@ -1,3 +1,5 @@
+package org.chicago.cases.options;
+
 import org.apache.commons.math3.distribution.NormalDistribution;
 
 public class Optionsutil {

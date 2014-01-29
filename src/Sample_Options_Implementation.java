@@ -4,6 +4,7 @@ import java.util.List;
 import org.chicago.cases.AbstractOptionsCase;
 import org.chicago.cases.options.OptionSignals.AdminMessage;
 import org.chicago.cases.options.OptionSignals.ForecastMessage;
+import org.chicago.cases.options.OptionSignals.VolUpdate;
 import org.chicago.cases.options.OrderInfo.OrderSide;
 import org.chicago.cases.options.OrderInfo;
 
@@ -112,6 +113,18 @@ public class Sample_Options_Implementation extends AbstractOptionsCase {
 			OrderInfo[] orders = new OrderInfo[Book.Instrument_Names.size()];
 			orders = Book.TradingAlgo();
 			return orders;
+		}
+
+		@Override
+		public void newVolUpdate(VolUpdate msg) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void orderFilled(String idSymbol, double price, int quantity) {
+			// TODO Auto-generated method stub
+			
 		}	
 	}
 
