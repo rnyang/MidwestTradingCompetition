@@ -2,7 +2,7 @@ package org.chicago.cases.options;
 
 import org.chicago.cases.options.OptionSignals.AdminMessage;
 import org.chicago.cases.options.OptionSignals.ForecastMessage;
-import org.chicago.cases.options.OptionSignals.MsgType;
+import org.chicago.cases.options.OptionSignals.VolUpdate;
 
 import com.optionscity.freeway.api.messages.Signal;
 import com.optionscity.freeway.api.services.IPlaybackService.ISignalProcessor;
@@ -21,13 +21,25 @@ public class OptionSignalProcessor implements ISignalProcessor {
 			throw new IllegalStateException("Invalid number of fields in signal String");
 		Signal signal = null;
 		String msgType = parts[0];
-		MsgType dataPoint = MsgType.valueOf(parts[1]);
-		int magnitude = Integer.parseInt(parts[2]);
-		if (msgType.equalsIgnoreCase("admin")) {
-			signal = new AdminMessage(dataPoint, magnitude);
+		if (msgType.equalsIgnoreCase("Vol")) {
+			double impliedVol = Double.parseDouble(parts[1]);
+			signal = new VolUpdate(impliedVol);
 		}
-		else if (msgType.equalsIgnoreCase("forecast")) {
-			signal = new ForecastMessage(dataPoint, magnitude);
+		else if (msgType.equalsIgnoreCase("Forecast")) {
+			double delta = Double.parseDouble(parts[1]);
+			double gamma = Double.parseDouble(parts[2]);
+			double vega = Double.parseDouble(parts[3]);
+			signal = new ForecastMessage(delta, gamma, vega);
+		}
+		else if (msgType.equalsIgnoreCase("Risk")) {
+			double minDelta = Double.parseDouble(parts[1]);
+			double maxDelta = Double.parseDouble(parts[2]);
+			double minGamma = Double.parseDouble(parts[3]);
+			double maxGamma = Double.parseDouble(parts[4]);
+			double minVega = Double.parseDouble(parts[5]);
+			double maxVega = Double.parseDouble(parts[6]);
+			
+			signal = new AdminMessage(minDelta, maxDelta, minGamma, maxGamma, minVega, maxVega);
 		}
 		else {
 			throw new IllegalStateException("Signal string does not follow the required format");

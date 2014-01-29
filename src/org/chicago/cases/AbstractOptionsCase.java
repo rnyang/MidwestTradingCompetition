@@ -6,6 +6,7 @@ import java.util.List;
 import org.chicago.cases.options.OptionSignalProcessor;
 import org.chicago.cases.options.OptionSignals.AdminMessage;
 import org.chicago.cases.options.OptionSignals.ForecastMessage;
+import org.chicago.cases.options.OptionSignals.VolUpdate;
 import org.chicago.cases.options.OrderInfo;
 import org.chicago.cases.options.OrderInfo.OrderSide;
 import org.chicago.cases.utils.InstrumentUtilities;
@@ -44,6 +45,8 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 			void newAdminMessage(AdminMessage msg);
 			
 			void newForecastMessage(ForecastMessage msg);
+			
+			void newVolUpdate(VolUpdate msg);
 			
 			void newBidAsk(String idSymbol, double bid, double ask);
 			
@@ -138,6 +141,11 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 		public void onSignal(ForecastMessage msg) {
 			log("Received new forecast message");
 			implementation.newForecastMessage(msg);
+		}
+		
+		public void onSignal(VolUpdate msg) {
+			log("Received new vol update message");
+			implementation.newVolUpdate(msg);
 		}
 		
 		// Called at periodic interval - @See ORDER_INTERVAL

@@ -6,6 +6,7 @@ import java.util.List;
 import org.chicago.cases.AbstractOptionsCase;
 import org.chicago.cases.options.OptionSignals.AdminMessage;
 import org.chicago.cases.options.OptionSignals.ForecastMessage;
+import org.chicago.cases.options.OptionSignals.VolUpdate;
 import org.chicago.cases.options.OrderInfo.OrderSide;
 import org.chicago.cases.options.OrderInfo;
 
@@ -21,7 +22,6 @@ public class ExampleOptionCaseImplementation extends AbstractOptionsCase {
 		private List<String> knownSymbols = new ArrayList<String>();
 
 		public void addVariables(IJobSetup setup) {
-			// Registers a variable with the system.
 			setup.addVariable("someFactor", "factor used to adjust something", "int", "2");
 		}
 
@@ -39,14 +39,16 @@ public class ExampleOptionCaseImplementation extends AbstractOptionsCase {
 			log("My order was filled with qty of " + volume + " at a price of " + fillPrice);
 		}
 
-
 		public void newAdminMessage(AdminMessage msg) {
 			log("I received an admin message!");
 		}
 
-
 		public void newForecastMessage(ForecastMessage msg) {
 			log("I received a forecast message!");
+		}
+		
+		public void newVolUpdate(VolUpdate msg) {
+			log("I received a vol update message!");
 		}
 
 		@Override
@@ -65,6 +67,8 @@ public class ExampleOptionCaseImplementation extends AbstractOptionsCase {
 		public void orderFilled(String idSymbol, double price, int quantity) {
 			log("My order for " + idSymbol + " got filled at " + price + " with quantity of " + quantity);
 		}
+
+		
 		
 	}
 
