@@ -52,9 +52,9 @@ public class Sample_Options_Implementation extends AbstractOptionsCase {
 		
 		public void UpdateRisk() {}
 		
-		public double getPnL() {}
+		//public double getPnL() {}
 		
-		public double[] getGreeks() {}
+		//public double[] getGreeks() {}
 		
 		//For your implementation, you may want to break this down into several functions as the logic may be complicated
 		public OrderInfo[] TradingAlgo(){
