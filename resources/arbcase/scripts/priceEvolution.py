@@ -4,6 +4,8 @@ import matplotlib.pyplot as ppt
 # 0. Time periods
 T = 100
 
+## A. Generate Book Updates
+
 # 1. Evolving True Value
 
 # AR(1) Process
@@ -60,6 +62,38 @@ ex2b = roundQtr(ex2b)
 
 grid = np.array(range(T))
 
+## B. Generate Customer Orders
+
+# Evolving Variance
+# AR(1) Process
+
+custVar = np.zeros(T)
+custVare = np.random.normal(0, 1.5, T)
+custVar[0] = 1.
+for i in xrange(1, T):
+    custVar[i] = abs(custVar[i-1] + custVare[i])
+
+# Customer Orders come in around true value
+
+# 0 = Bid, 1 = Ask
+custside = np.random.randint(2, size=T)
+
+# 0 = ROBOT, 1 = SNOW
+custexch = np.random.randint(2, size=T)
+
+print custexch
+
+custPrice = [np.random.normal(value[i], custVar[i]) for i in xrange(T)]
+custPrice = roundQtr(custPrice)
+
+# Clear all customer orders at 0 mod 5 times
+for i in range(0, T, 5):
+    custside[i] = -1
+    custexch[i] = -1
+    custPrice[i] = 0
+
+## C. Support Functions
+
 # 5. Plot (optional)
 
 # ppt.clf()
@@ -84,11 +118,23 @@ grid = np.array(range(T))
 # Exchange2 = SNOW
 
 # Example
-# S,1.39058E+12,ROBOT;98.0;102.0;SNOW;100.0;104.0
-entries = [("S, " + i + ",ROBOT;" + ex1b[i] + ";" + ex1a[i] + \
-                        ";SNOW;" + ex2b[i] + ";" + ex2a[i] + "\n") \
-                        for i in range(T)]
+# S,1.39058E+12,BOOKUPDATE;ROBOT;98.0;102.0;SNOW;100.0;104.0
 
-with open('foo.csv') as openFile:
+entries = []
+
+for i in xrange(T):
+    if i % 5 != 0:
+        entry = "S," + str(1000. * i) + ",ORDER;"
+        if custexch[i] == 0:
+            entry += "ROBOT;"
+        elif custexch[i] == 1:
+            entry += "SNOW;"
+        entry += str(custside[i]) + ";"
+        entry += str(custPrice[i]) + "\n"
+        entries.append(entry)
+
+    entries.append("S," + str(1000. * i) + ",BOOKUPDATE;ROBOT;" + str(ex1b[i]) + ";" + str(ex1a[i]) + ";SNOW;" + str(ex2b[i]) + ";" + str(ex2a[i]) + "\n")
+
+with open('foo.csv', 'w') as openFile:
 	for entry in entries:
 		openFile.write(entry)
