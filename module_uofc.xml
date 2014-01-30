@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="module_uofc" default="compile.module.uofc">
+  <dirname property="module.uofc.basedir" file="${ant.file.module_uofc}"/>
+  
+  <property name="module.jdk.home.uofc" value="${project.jdk.home}"/>
+  <property name="module.jdk.bin.uofc" value="${project.jdk.bin}"/>
+  <property name="module.jdk.classpath.uofc" value="${project.jdk.classpath}"/>
+  
+  <property name="compiler.args.uofc" value="-encoding UTF-8 -source 1.6 ${compiler.args}"/>
+  
+  <property name="uofc.output.dir" value="${module.uofc.basedir}/eclipse-bin"/>
+  <property name="uofc.testoutput.dir" value="${module.uofc.basedir}/eclipse-bin"/>
+  
+  <path id="uofc.module.bootclasspath">
+    <!-- Paths to be included in compilation bootclasspath -->
+  </path>
+  
+  <path id="uofc.module.production.classpath">
+    <path refid="${module.jdk.classpath.uofc}"/>
+    <pathelement location="${basedir}/libs/freeway.jar"/>
+    <pathelement location="${basedir}/libs/commons-math3-3.2.jar"/>
+  </path>
+  
+  <path id="uofc.runtime.production.module.classpath">
+    <pathelement location="${uofc.output.dir}"/>
+    <pathelement location="${basedir}/libs/freeway.jar"/>
+    <pathelement location="${basedir}/libs/commons-math3-3.2.jar"/>
+  </path>
+  
+  <path id="uofc.module.classpath">
+    <pathelement location="${uofc.output.dir}"/>
+    <path refid="${module.jdk.classpath.uofc}"/>
+    <pathelement location="${basedir}/libs/freeway.jar"/>
+    <pathelement location="${basedir}/libs/commons-math3-3.2.jar"/>
+  </path>
+  
+  <path id="uofc.runtime.module.classpath">
+    <pathelement location="${uofc.output.dir}"/>
+    <pathelement location="${basedir}/libs/freeway.jar"/>
+    <pathelement location="${basedir}/libs/commons-math3-3.2.jar"/>
+  </path>
+  
+  
+  <patternset id="excluded.from.module.uofc">
+    <patternset refid="ignored.files"/>
+  </patternset>
+  
+  <patternset id="excluded.from.compilation.uofc">
+    <patternset refid="excluded.from.module.uofc"/>
+  </patternset>
+  
+  <path id="uofc.module.sourcepath">
+    <dirset dir="${module.uofc.basedir}">
+      <include name="src"/>
+      <include name="misc"/>
+      <include name="test"/>
+    </dirset>
+  </path>
+  
+  
+  <target name="compile.module.uofc" depends="compile.module.uofc.production,compile.module.uofc.tests" description="Compile module uofc"/>
+  
+  <target name="compile.module.uofc.production" depends="register.custom.compilers" description="Compile module uofc; production classes">
+    <mkdir dir="${uofc.output.dir}"/>
+    <javac2 destdir="${uofc.output.dir}" debug="${compiler.debug}" nowarn="${compiler.generate.no.warnings}" memorymaximumsize="${compiler.max.memory}" fork="true" executable="${module.jdk.bin.uofc}/javac">
+      <compilerarg line="${compiler.args.uofc}"/>
+      <bootclasspath refid="uofc.module.bootclasspath"/>
+      <classpath refid="uofc.module.production.classpath"/>
+      <src refid="uofc.module.sourcepath"/>
+      <patternset refid="excluded.from.compilation.uofc"/>
+    </javac2>
+    
+    <copy todir="${uofc.output.dir}">
+      <fileset dir="${module.uofc.basedir}/src">
+        <patternset refid="compiler.resources"/>
+        <type type="file"/>
+      </fileset>
+      <fileset dir="${module.uofc.basedir}/misc">
+        <patternset refid="compiler.resources"/>
+        <type type="file"/>
+      </fileset>
+      <fileset dir="${module.uofc.basedir}/test">
+        <patternset refid="compiler.resources"/>
+        <type type="file"/>
+      </fileset>
+    </copy>
+  </target>
+  
+  <target name="compile.module.uofc.tests" depends="register.custom.compilers,compile.module.uofc.production" description="compile module uofc; test classes" unless="skip.tests"/>
+  
+  <target name="clean.module.uofc" description="cleanup module">
+    <delete dir="${uofc.output.dir}"/>
+    <delete dir="${uofc.testoutput.dir}"/>
+  </target>
+</project>
