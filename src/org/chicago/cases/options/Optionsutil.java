@@ -12,8 +12,8 @@ public class Optionsutil {
 		return rv;
 	}
 	
-	public static double Delta(double S, double K,double t,double r,double vol){
-		double d_1 = (Math.log(1.0*S/K)+(r+Math.pow(vol, 2)/2)*t)/(vol*Math.sqrt(t));
+	public static double Delta(double spot, double strike,double time,double rate,double vol){
+		double d_1 = (Math.log(1.0*spot/strike)+(rate+Math.pow(vol, 2)/2)*time)/(vol*Math.sqrt(time));
 		NormalDistribution norm = new NormalDistribution();
 		return norm.cumulativeProbability(d_1);
 	}
@@ -24,7 +24,7 @@ public class Optionsutil {
 		return norm.density(d_1)/(S*vol*Math.sqrt(t));
 	}
 	
-	public static double Vega(double S, double K,double t,double r,double vol){
+	public static double calculateVega(double S, double K,double t,double r,double vol){
 		double d_1 = (Math.log(1.0*S/K)+(r+Math.pow(vol, 2)/2)*t)/(vol*Math.sqrt(t));
 		NormalDistribution norm = new NormalDistribution();
 		return norm.density(d_1)*S*Math.sqrt(t);
