@@ -23,26 +23,48 @@ public class ArbSignalProcessor implements ISignalProcessor {
 		String[] parts = signalString.split(";");
 		if (parts.length < 1)
 			throw new IllegalStateException("Invalid number of fields in signal String");
+
 		if (parts[0].equals("ORDER")){
 			// 0 = Customer Buy, 1 = Customer Sell
 			Exchange exchange;
-			if(parts[1].equals("SNOW")){
-				exchange = Exchange.SNOW;
-			}else if(parts[1].equals("SNOW")){
+			if(parts[1].equals("ROBOT")){
 				exchange = Exchange.ROBOT;
-			}else{
+			}
+            else if(parts[1].equals("SNOW")){
+				exchange = Exchange.SNOW;
+			}
+            else{
 				throw new IllegalStateException("Unknown exchange in Customer Order");
 			}
+
 			CustomerSide side = CustomerSide.values()[Integer.parseInt(parts[2])];
 			double price = Double.parseDouble(parts[3]);
+
 			return new CustomerOrder(exchange,side,price);
-		}else if (parts[0].equals("BOOKUPDATE")){
-			double robotBid = Double.parseDouble(parts[1]);
-			double robotAsk = Double.parseDouble(parts[2]);
-			Quote robotQuote = new Quote(Exchange.ROBOT, robotBid, robotAsk);
-			double snowBid = Double.parseDouble(parts[4]);
-			double snowAsk = Double.parseDouble(parts[5]);
-			Quote snowQuote = new Quote(Exchange.SNOW, snowBid, snowAsk);
+		}
+        else if (parts[0].equals("BOOKUPDATE")){
+
+            Quote robotQuote;
+            Quote snowQuote;
+
+            if (parts[1].equals("ROBOT")){
+			    double robotBid = Double.parseDouble(parts[2]);
+			    double robotAsk = Double.parseDouble(parts[3]);
+			    robotQuote = new Quote(Exchange.ROBOT, robotBid, robotAsk);
+            }
+            else{
+                throw new IllegalStateException("No ROBOT exchange orders.");
+            }
+
+            if (parts[4].equals("SNOW")){
+			    double snowBid = Double.parseDouble(parts[5]);
+			    double snowAsk = Double.parseDouble(parts[6]);
+			    snowQuote = new Quote(Exchange.SNOW, snowBid, snowAsk);
+            }
+            else{
+                throw new IllegalStateException("No SNOW exchange orders.");
+            }
+
 			return new TopOfBookUpdate(snowQuote, robotQuote);
 		}
 		return null;
