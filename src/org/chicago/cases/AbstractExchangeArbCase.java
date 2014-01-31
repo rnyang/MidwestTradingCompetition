@@ -133,6 +133,7 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 			// Initialize tick and queue
 			tick = 0;
 			Queue<QueueEvent> queue = new LinkedList<QueueEvent>();
+
 		}
 
 		/*
@@ -147,6 +148,7 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 			Quote[] quotes = new Quote[2];
 			quotes[0] = signal.snowQuote;
 			quotes[1] = signal.robotQuote;
+			latestTOB = quotes;
 
 			// Create a TOBUpdate event and add it to queue
 			TOBUpdate tobupdate = new TOBUpdate(this.tick+5, quotes);
