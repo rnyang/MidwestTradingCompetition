@@ -44,6 +44,10 @@ public abstract class AbstractMathCase extends AbstractJob {
 	
 	private IDB teamDB;
 	private MathCase implementation;
+
+    /*--------------------------------Hanzhi Update----------------------------------------*/
+    private int position = 0;
+	/*--------------------------------Hanzhi Update----------------------------------------*/
 	
 	/*
 	 * Freeway has its own events that are likely too complex for the student's to work out in one month.
@@ -103,7 +107,16 @@ public abstract class AbstractMathCase extends AbstractJob {
 		log("Received TOB " + msg.instrumentId);
 		Prices prices = instruments().getAllPrices(msg.instrumentId);
 		int result = implementation.newBidAsk(prices.bid, prices.ask);
-		if (result > 0) {
+
+        /*--------------------------------Hanzhi Update----------------------------------------*/
+        int newposition = position + result;
+        if (newposition > 5 || newposition < -5){
+            implementation.orderFilled(0,0);
+            return;
+        }
+		/*--------------------------------Hanzhi Update----------------------------------------*/
+
+        if (result > 0) {
 			long id = trades().manualTrade(msg.instrumentId,
 					 result,
 					 prices.ask,
@@ -121,6 +134,10 @@ public abstract class AbstractMathCase extends AbstractJob {
 					 null, null, null, null, null, null);
 			implementation.orderFilled(result, prices.bid);
 		}
+
+		/*--------------------------------Hanzhi Update----------------------------------------*/
+        position = position + result;
+		/*--------------------------------Hanzhi Update----------------------------------------*/
 	}
 
 	
