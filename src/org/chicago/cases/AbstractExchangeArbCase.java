@@ -134,6 +134,12 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 			tick = 0;
 			Queue<QueueEvent> queue = new LinkedList<QueueEvent>();
 
+			// Initialize latestTOB, for safety
+			// Adding in some dummy values for now.
+			this.latestTOB = new Quote[2];
+			this.latestTOB[0] = new Quote(Exchange.ROBOT, 0.0,200.0);
+			this.latestTOB[1] = new Quote(Exchange.SNOW, 0.0,200.0);
+
 		}
 
 		/*
@@ -148,7 +154,7 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 			Quote[] quotes = new Quote[2];
 			quotes[0] = signal.snowQuote;
 			quotes[1] = signal.robotQuote;
-			latestTOB = quotes;
+			this.latestTOB = quotes;
 
 			// Create a TOBUpdate event and add it to queue
 			TOBUpdate tobupdate = new TOBUpdate(this.tick+5, quotes);
