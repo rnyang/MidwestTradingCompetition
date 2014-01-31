@@ -47,6 +47,14 @@ public class ArbSignalProcessor implements ISignalProcessor {
             Quote robotQuote;
             Quote snowQuote;
 
+            double robotBid = Double.parseDouble(parts[2]);
+            double robotAsk = Double.parseDouble(parts[3]);
+            robotQuote = new Quote(Exchange.ROBOT, robotBid, robotAsk);
+
+            double snowBid = Double.parseDouble(parts[5]);
+            double snowAsk = Double.parseDouble(parts[6]);
+            snowQuote = new Quote(Exchange.SNOW, snowBid, snowAsk);
+            /*
             if (parts[1].equals("ROBOT")){
 			    double robotBid = Double.parseDouble(parts[2]);
 			    double robotAsk = Double.parseDouble(parts[3]);
@@ -64,7 +72,7 @@ public class ArbSignalProcessor implements ISignalProcessor {
             else{
                 throw new IllegalStateException("No SNOW exchange orders.");
             }
-
+*/
 			return new TopOfBookUpdate(snowQuote, robotQuote);
 		}
 		return null;

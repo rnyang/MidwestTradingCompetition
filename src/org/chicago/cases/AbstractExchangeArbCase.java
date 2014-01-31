@@ -132,13 +132,16 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 
 			// Initialize tick and queue
 			tick = 0;
-			Queue<QueueEvent> queue = new LinkedList<QueueEvent>();
+			this.queue = new LinkedList<QueueEvent>();
 
 			// Initialize latestTOB, for safety
 			// Adding in some dummy values for now.
 			this.latestTOB = new Quote[2];
 			this.latestTOB[0] = new Quote(Exchange.ROBOT, 0.0,200.0);
 			this.latestTOB[1] = new Quote(Exchange.SNOW, 0.0,200.0);
+
+            // Initialize Player's Quotes
+
 
 		}
 
@@ -147,7 +150,8 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 		*/
 		public void onSignal(TopOfBookUpdate signal) {
 			// Increment Tick
-			tick++;
+			this.tick++;
+            log("Tick " + this.tick);
 
 			// Send updates to algo
 			log("Received TOB update");
@@ -157,23 +161,32 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 			this.latestTOB = quotes;
 
 			// Create a TOBUpdate event and add it to queue
+            log("Creating TOB Update object");
 			TOBUpdate tobupdate = new TOBUpdate(this.tick+5, quotes);
 			this.queue.add(tobupdate);
 
 			// Process market-crossing orders
-			for (int i = 0; i < 2; i++) {
-				int exchangeOrd = quotes[i].exchange.ordinal();
+            log("Processing market crossing orders");
 
-				if(this.algoQuotes[exchangeOrd].bidPrice > quotes[i].askPrice){
-					processOrder(AlgoSide.ALGOBUY,this.algoQuotes[i].bidPrice);
-				} 
-				else if(this.algoQuotes[exchangeOrd].askPrice < quotes[i].bidPrice){
-					processOrder(AlgoSide.ALGOSELL,this.algoQuotes[i].askPrice);
-				}
-			}
+            // No orders for first tick
+            if (this.tick != 1) {
+                for (int i = 0; i < 2; i++) {
+                    int exchangeOrd = quotes[i].exchange.ordinal();
+
+                    log("Processing exchange " + exchangeOrd);
+
+                    if(this.algoQuotes[exchangeOrd].bidPrice > quotes[i].askPrice){
+                        processOrder(AlgoSide.ALGOBUY,this.algoQuotes[i].bidPrice);
+                    }
+                    else if(this.algoQuotes[exchangeOrd].askPrice < quotes[i].bidPrice){
+                        processOrder(AlgoSide.ALGOSELL,this.algoQuotes[i].askPrice);
+                    }
+                }
+            }
 
 			// Ask for new quotes every five ticks
-			if (tick % 5 == 0) {
+            log("Check if new quotes from user.");
+			if ((this.tick-1) % 5 == 0) {
 				this.algoQuotes = implementation.refreshQuotes();
 			}
 			
@@ -203,7 +216,7 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 		*/
 		public void processOrder(AlgoSide side, double price){
 			if(side == AlgoSide.ALGOBUY){
-				long id = trades().manualTrade("",				// Instruments PLEASE HELP
+				long id = trades().manualTrade("PROD",				// Instruments PLEASE HELP
 					 1,
 					 price,
 					 com.optionscity.freeway.api.Order.Side.BUY,
@@ -212,7 +225,7 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 				pos += 1;
 			}
 			else if(side == AlgoSide.ALGOSELL){
-				long id = trades().manualTrade("",				// Instruments PLEASE HELP
+				long id = trades().manualTrade("PROD",				// Instruments PLEASE HELP
 					 1,
 					 price,
 					 com.optionscity.freeway.api.Order.Side.SELL,
