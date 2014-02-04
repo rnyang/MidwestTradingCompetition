@@ -137,8 +137,8 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 			// Initialize latestTOB, for safety
 			// Adding in some dummy values for now.
 			this.latestTOB = new Quote[2];
-			this.latestTOB[0] = new Quote(Exchange.ROBOT, 0.0,200.0);
-			this.latestTOB[1] = new Quote(Exchange.SNOW, 0.0,200.0);
+			this.latestTOB[0] = new Quote(Exchange.ROBOT, 99.0,101.0);
+			this.latestTOB[1] = new Quote(Exchange.SNOW, 99.0,101.0);
 
             // Initialize Player's Quotes
 			implementation.initialize(this.latestTOB);
