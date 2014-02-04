@@ -141,7 +141,7 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 			this.latestTOB[1] = new Quote(Exchange.SNOW, 0.0,200.0);
 
             // Initialize Player's Quotes
-
+			implementation.initialize(this.latestTOB);
 
 		}
 

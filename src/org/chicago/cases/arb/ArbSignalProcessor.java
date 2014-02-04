@@ -10,6 +10,7 @@ import org.chicago.cases.AbstractExchangeArbCase.CustomerSide;
 
 import com.optionscity.freeway.api.messages.Signal;
 import com.optionscity.freeway.api.services.IPlaybackService.ISignalProcessor;
+import org.chicago.cases.utils.TeamUtilities;
 
 public class ArbSignalProcessor implements ISignalProcessor {
 
@@ -29,16 +30,16 @@ public class ArbSignalProcessor implements ISignalProcessor {
 			Exchange exchange;
 			if(parts[1].equals("ROBOT")){
 				exchange = Exchange.ROBOT;
-			}
-            else if(parts[1].equals("SNOW")){
+			}else if(parts[1].equals("SNOW")){
 				exchange = Exchange.SNOW;
-			}
-            else{
+			}else{
 				throw new IllegalStateException("Unknown exchange in Customer Order");
 			}
 
 			CustomerSide side = CustomerSide.values()[Integer.parseInt(parts[2])];
 			double price = Double.parseDouble(parts[3]);
+
+			//log("SYSTEM: Processed customer order of " + side + " at " + price + " from " + exchange);
 
 			return new CustomerOrder(exchange,side,price);
 		}
@@ -73,6 +74,7 @@ public class ArbSignalProcessor implements ISignalProcessor {
                 throw new IllegalStateException("No SNOW exchange orders.");
             }
 */
+			//log("SYSTEM: Processed bookupdate (ROBOT,"+robotQuote.bidPrice+","+robotQuote.askPrice+") and (SNOW,"+snowQuote.bidPrice+","+snowQuote.askPrice+")");
 			return new TopOfBookUpdate(snowQuote, robotQuote);
 		}
 		return null;
