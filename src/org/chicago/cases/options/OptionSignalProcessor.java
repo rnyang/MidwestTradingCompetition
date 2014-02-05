@@ -2,6 +2,7 @@ package org.chicago.cases.options;
 
 import org.chicago.cases.options.OptionSignals.AdminMessage;
 import org.chicago.cases.options.OptionSignals.ForecastMessage;
+import org.chicago.cases.options.OptionSignals.OrderRequestMessage;
 import org.chicago.cases.options.OptionSignals.VolUpdate;
 
 import com.optionscity.freeway.api.messages.Signal;
@@ -17,8 +18,6 @@ public class OptionSignalProcessor implements ISignalProcessor {
 	@Override
 	public Signal fromString(String signalString) {
 		String[] parts = signalString.split(";");
-		if (parts.length < 3)
-			throw new IllegalStateException("Invalid number of fields in signal String");
 		Signal signal = null;
 		String msgType = parts[0];
 		if (msgType.equalsIgnoreCase("Vol")) {
@@ -38,8 +37,10 @@ public class OptionSignalProcessor implements ISignalProcessor {
 			double maxGamma = Double.parseDouble(parts[4]);
 			double minVega = Double.parseDouble(parts[5]);
 			double maxVega = Double.parseDouble(parts[6]);
-			
 			signal = new AdminMessage(minDelta, maxDelta, minGamma, maxGamma, minVega, maxVega);
+		}
+		else if (msgType.equalsIgnoreCase("Orders")) {
+			signal = new OrderRequestMessage();
 		}
 		else {
 			throw new IllegalStateException("Signal string does not follow the required format");

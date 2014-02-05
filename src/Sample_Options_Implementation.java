@@ -98,6 +98,10 @@ public class Sample_Options_Implementation extends AbstractOptionsCase {
 			// TODO Auto-generated method stub
 			
 		}	
+		
+		public void penaltyLiquidation(String idSymbol, double price, int quantity) {
+			
+		}
 	}
 
 	public OptionsCase getOptionCaseImplementation() {

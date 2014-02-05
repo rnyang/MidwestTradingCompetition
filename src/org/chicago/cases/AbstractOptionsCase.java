@@ -6,6 +6,7 @@ import java.util.List;
 import org.chicago.cases.options.OptionSignalProcessor;
 import org.chicago.cases.options.OptionSignals.AdminMessage;
 import org.chicago.cases.options.OptionSignals.ForecastMessage;
+import org.chicago.cases.options.OptionSignals.OrderRequestMessage;
 import org.chicago.cases.options.OptionSignals.VolUpdate;
 import org.chicago.cases.options.OrderInfo;
 import org.chicago.cases.options.OrderInfo.OrderSide;
@@ -23,7 +24,7 @@ import com.optionscity.freeway.api.messages.MarketBidAskMessage;
 
 public abstract class AbstractOptionsCase extends AbstractJob {
 	
-		private static final long ORDER_INTERVAL = 1000;
+		private static final long STAT_REFRESH = 1000;
 	
 		// ---------------- Define Case Interface and abstract method ----------------
 		/*
@@ -54,6 +55,8 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 			
 			void orderFilled(String idSymbol, double price, int quantity);
 			
+			void penaltyFill(String idSymbol, double price, int quantity);
+			
 		}
 		
 
@@ -80,7 +83,6 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 		@Override
 		public void install(IJobSetup setup) {
 			setup.addVariable("Team_Code", "Team Code and product to trade", "string", "");
-			setup.setVariable("timer", "" + ORDER_INTERVAL);
 			getOptionCaseImplementation().addVariables(setup);
 		}
 
@@ -98,9 +100,6 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 				container.failJob("Please set a Team_Code in the configuration");
 			if (!TeamUtilities.validateTeamCode(teamCode))
 				container.failJob("The specified Team Code is not a valid code.  Please enter the code provided to your team.");
-			if (getIntVar("timer") > ORDER_INTERVAL) {
-				container.failJob("Timer has been modified!");
-			}
 			
 			log("Team Code is, " + teamCode);
 			
@@ -148,8 +147,8 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 			implementation.newVolUpdate(msg);
 		}
 		
-		// Called at periodic interval - @See ORDER_INTERVAL
-		public void onTimer() {
+		public void onSignal(OrderRequestMessage msg) {
+			log("Received new order request message");
 			OrderInfo[] orders = implementation.placeOrders();
 			for (OrderInfo order : orders) {
 				Order.Side side = (order.side == OrderSide.BUY) ? Order.Side.BUY : Order.Side.SELL;
@@ -162,4 +161,5 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 				implementation.orderFilled(order.idSymbol, order.price, order.quantity);
 			}
 		}
+		
 }

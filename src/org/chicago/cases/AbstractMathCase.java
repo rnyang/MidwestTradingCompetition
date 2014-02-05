@@ -17,6 +17,8 @@ import com.optionscity.freeway.api.messages.MarketBidAskMessage;
 
 public abstract class AbstractMathCase extends AbstractJob {
 	
+	private static final long STAT_REFRESH = 1000;
+	
 	// ---------------- Define Case Interface and abstract method ----------------
 	/*
 	 * By having the abstract method: getMathCaseImplementation(), we are saying, "All classes that
@@ -44,10 +46,7 @@ public abstract class AbstractMathCase extends AbstractJob {
 	
 	private IDB teamDB;
 	private MathCase implementation;
-
-    /*--------------------------------Hanzhi Update----------------------------------------*/
     private int position = 0;
-	/*--------------------------------Hanzhi Update----------------------------------------*/
 	
 	/*
 	 * Freeway has its own events that are likely too complex for the student's to work out in one month.

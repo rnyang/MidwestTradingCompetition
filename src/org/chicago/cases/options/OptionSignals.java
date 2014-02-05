@@ -29,6 +29,14 @@ public class OptionSignals {
 		
 	}
 	
+	public static class OrderRequestMessage extends Signal {
+		
+		public OrderRequestMessage() {
+			super(OrderRequestMessage.class.getSimpleName());
+		}
+		
+	}
+	
 	public static class AdminMessage extends Signal {
 		
 		public final double minDelta;

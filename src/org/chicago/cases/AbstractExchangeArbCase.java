@@ -25,6 +25,8 @@ import com.optionscity.freeway.api.IJobSetup;
 
 public abstract class AbstractExchangeArbCase extends AbstractJob {
 	
+	private static final long STAT_REFRESH = 1000;
+	
 	// ---------------- Define Case Interface and abstract method ----------------
 		/*
 		 * By having the abstract method: getArbCaseImplementation(), we are saying, "All classes that
