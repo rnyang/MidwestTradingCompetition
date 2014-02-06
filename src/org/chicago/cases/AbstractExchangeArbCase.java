@@ -56,7 +56,7 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 			
 			void initialize(Quote[] startingQuotes);
 			
-			void fillNotice(Exchange exchange, double price);
+			void fillNotice(Exchange exchange, double price, AlgoSide algoside);
 			
 			void positionPenalty(int clearedQuantity, double price);
 			
@@ -278,7 +278,7 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 
 				if(event instanceof OrderFill){
 					OrderFill fill = (OrderFill) event;
-					implementation.fillNotice(fill.exchange, fill.price);
+					implementation.fillNotice(fill.exchange, fill.price, fill.algoside);
 				}
 				else if(event instanceof TOBUpdate){
 					TOBUpdate tob = (TOBUpdate) event;

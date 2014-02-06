@@ -13,6 +13,10 @@ public class ExampleArbCaseImplementation extends AbstractExchangeArbCase {
 		private IDB myDatabase;
 		int factor;
 
+		int position;
+		double[] desiredRobotPrices;
+		double[] desiredSnowPrices;
+
 		public void addVariables(IJobSetup setup) {
 			// Registers a variable with the system.
 			setup.addVariable("someFactor", "factor used to adjust something", "int", "2");
@@ -29,16 +33,30 @@ public class ExampleArbCaseImplementation extends AbstractExchangeArbCase {
 			for (Quote quote : startingQuotes) {
 				log("Initial bid of " + quote.bidPrice + ", and ask of " + quote.askPrice + " from " + quote.exchange);
 			}
+			double[] desiredRobotPrices = new double[2];
+			desiredRobotPrices[0] = startingQuotes[0].bidPrice + 0.2;
+			desiredRobotPrices[1] = startingQuotes[0].askPrice - 0.2;
+
+			double[] desiredSnowPrices = new double[2];
+			desiredSnowPrices[0] = startingQuotes[1].bidPrice + 0.2;
+			desiredSnowPrices[1] = startingQuotes[1].askPrice - 0.2;
 		}
 
 		@Override
-		public void fillNotice(Exchange exchange, double price) {
-			log("My quote was filled with at a price of " + price + " on " + exchange);
+		public void fillNotice(Exchange exchange, double price, AlgoSide algoside) {
+			log("My quote was filled with at a price of " + price + " on " + exchange + " as a " + algoside);
+
+			if(algoside == AlgoSide.ALGOBUY){
+				position += 1;
+			}else{
+				position -= 1;
+			}
 		}
 
 		@Override
 		public void positionPenalty(int clearedQuantity, double price) {
 			log("I received a position penalty with " + clearedQuantity + " positions cleared at " + price);
+			position -= clearedQuantity;
 		}
 
 		@Override
@@ -46,13 +64,19 @@ public class ExampleArbCaseImplementation extends AbstractExchangeArbCase {
 			for (Quote quote : quotes) {
 				log("I received a new bid of " + quote.bidPrice + ", and ask of " + quote.askPrice + " from " + quote.exchange);
 			}
+
+			desiredRobotPrices[0] = quotes[0].bidPrice + 0.2;
+			desiredRobotPrices[1] = quotes[0].askPrice - 0.2;
+
+			desiredSnowPrices[0] = quotes[1].bidPrice + 0.2;
+			desiredSnowPrices[1] = quotes[1].askPrice - 0.2;
 		}
 
 		@Override
 		public Quote[] refreshQuotes() {
 			Quote[] quotes = new Quote[2];
-			quotes[0] = new Quote(Exchange.ROBOT, 100.00, 102.00);
-			quotes[1] = new Quote(Exchange.SNOW, 101.00, 103.00);
+			quotes[0] = new Quote(Exchange.ROBOT, desiredRobotPrices[0], desiredRobotPrices[1]);
+			quotes[1] = new Quote(Exchange.SNOW, desiredSnowPrices[0], desiredSnowPrices[1]);
 			return quotes;
 		}
 
