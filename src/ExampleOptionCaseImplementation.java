@@ -74,8 +74,8 @@ public class ExampleOptionCaseImplementation extends AbstractOptionsCase {
 			log("My order for " + idSymbol + " got filled at " + price + " with quantity of " + quantity);
 		}
 
-		
-		
+
+        public void penaltyFill(String idSymbol, double price, int quantity){}
 	}
 
 	@Override
