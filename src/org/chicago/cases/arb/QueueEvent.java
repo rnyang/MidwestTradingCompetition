@@ -15,14 +15,14 @@ public abstract class QueueEvent {
 		this.tick = tick;
 	}
 	
-	public static class OrderFill extends QueueEvent {
+	public static class DelayedOrderFill extends QueueEvent {
 		
 		public final AlgoSide algoside;
 		public final double price;
 		public final Exchange exchange;
 		
 		
-		public OrderFill(int tick, AlgoSide algoside, double price, Exchange exchange) {
+		public DelayedOrderFill(int tick, AlgoSide algoside, double price, Exchange exchange) {
 			super(tick);
 			this.algoside = algoside;
 			this.price = price;
@@ -31,13 +31,14 @@ public abstract class QueueEvent {
 		
 	}
 
-	public static class TOBUpdate extends QueueEvent {
+	public static class DelayedTopOfBook extends QueueEvent {
 
 		public final Quote[] quotes;
 
-		public TOBUpdate(int tick, Quote[] quotes) {
+		public DelayedTopOfBook(int tick, Quote[] quotes) {
 			super(tick);
 			this.quotes = quotes;
 		}
 	}
+	
 }

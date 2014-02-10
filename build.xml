@@ -2,6 +2,7 @@
 <project name="uofc" default="all">
 
     <target name="all" depends="clean, init, compile, package"/>
+    <target name="interfaces" depends="clean, init, compile, package-interfaces"/>
 
     <target name="init">
 	<mkdir dir="build"/>
@@ -27,6 +28,12 @@
 
     <target name="package">
        <jar destfile="build/artifacts/cases-core.jar">
+	   <fileset dir="build/prod/" includes="org/chicago/**"/>
+      </jar>
+    </target>
+
+    <target name="package-interfaces">
+       <jar destfile="build/artifacts/interfaces.jar">
 	   <fileset dir="build/prod/" includes="org/chicago/**"/>
       </jar>
     </target>
