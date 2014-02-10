@@ -1,0 +1,218 @@
+%%%%%%PREAMBLE%%%%%%
+\documentclass[12pt]{article}
+
+%%%Include packages%%%
+\usepackage{amssymb,amsmath,amsthm,amsfonts} %For math type
+\usepackage{verbatim}						%For computer code
+\usepackage{graphicx}
+\setlength{\parindent}{0.0in}					%Paragraph indent
+\usepackage[top=0.6in, bottom=0.6in, left=0.75in, right=0.75in]{geometry}	%Set margins
+\usepackage{graphicx,ctable,booktabs}			%For graphs
+\usepackage{parskip}					%Puts gaps between paragraphs
+\usepackage{setspace}					%Needed for line spacing
+\usepackage{enumerate}	
+\usepackage{hyperref}				%Allows options on enumerated lists
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{listings}
+\usepackage{framed}
+\usepackage{caption}
+
+\setlength{\footskip}{4mm}				%Pulls up the page numbers from being 
+
+\usepackage{etoolbox}
+\newcommand{\zerodisplayskips}{%
+  \setlength{\abovedisplayskip}{0pt}
+  \setlength{\belowdisplayskip}{0pt}
+  \setlength{\abovedisplayshortskip}{0pt}
+  \setlength{\belowdisplayshortskip}{0pt}}
+\appto{\normalsize}{\zerodisplayskips}
+\appto{\small}{\zerodisplayskips}
+\appto{\footnotesize}{\zerodisplayskips}
+
+
+%%%Set the Title%%%
+\title{High-Frequency Exchange Arbitrage}
+
+%%%Other miscellaneous formatting%%
+%\renewcommand{\qedsymbol}{}		%Suppress QED symbol on proofs
+\newenvironment{myindentpar}[1]%
+{\begin{list}{}%
+         {\setlength{\leftmargin}{#1}}%
+         \item[]%
+}
+{\end{list}}  	%Allow indented items
+
+
+%%%%%%MAIN BODY OF THE TEXT%%%%%%
+\date{}
+\begin{document}
+
+\maketitle
+\ \\
+\begin{center}1. Summary\end{center}
+Your task for this case is to make markets in two products, which represent one asset traded on two separate exchanges (ROBOT and SNOW). Since the two exchanges are not co-located, you will experience a delay in both receiving market information and submitting orders. 
+
+Your algorithm will regularly receive information about the best bid and ask prices on each exchange. Your algorithm will be required to quote bid and ask prices at fixed intervals. At frequent intervals, customers will come to market and if your price is at the top of the book and satisfies the customer’s order, your quote will be filled at the price that you quote.
+
+\ \\
+\begin{center}2. Timing\end{center}
+Consider the following diagram: \\
+  \begin{center}
+    \includegraphics[scale=0.4]{delay.png}
+  \end{center}
+There will be a time lag of information from the exchange to your algorithm (Book updates, Order fills) In the other hand, the quoted prices supplied by your algorithm are assumed to be reflected on the exchange instantly. Thus, in a sense, your algorithm will be trading partially blind. Factoring this time lag into your algorithm will be crucial for managing your exposure to market movements.
+
+In concrete and technical terms, the case will be laid out like this:
+\begin{itemize}
+  \item You will receive information about the top-of-book updates every tick, subject to delay by 5 ticks. (t=5, 6, 7, 8, 9, 10, 11...).
+  \item Your algorithm will be able to refresh prices every 5 ticks (t=5, 10...). Note that you will not make any markets for the first 5 ticks.%
+  \item Customer orders will come in all ticks that aren’t a multiple of 5 (t=1, 2, 3, 4, 6, 7, 8, 9, 11...), so there will be no confusion in order flow when you refresh your prices.
+  \item Both top-of-book updates as well as order fills are lagged by 5 ticks. In other words, if your quote gets hit at t=6, your algorithm will only be informed about it at t=11.
+  \item If your bid quote is higher than the top-of-book’s ask, or your ask quote is lower than the top-of-book’s bid (i.e. you are pricing outside of the markets), your quote will get hit for a single trade, just as in the case of a customer order.
+  \item All trades are for quantity = 1.
+  \item Thus, you can get up to a maximum of 16 order fills between quote refreshes: 4 from customers, and 4 from other market-makers, all multiplied by 2 exchanges (2*(4+4)=16).
+  \item Trades, quotes and orders on each exchange do not affect the other exchange, although you expect prices on both exchanges to move in line over time. In other words, the top-of-book quotes can be completely out of line across exchanges. It is up to you to take advantage of arbitrage opportunities across exchanges.
+\end{itemize}
+
+Consider the following example (on a single exchange):
+\begin{itemize}
+  \item ([99,101] indicates a bid-price at \$99.00 and an ask-price at \$101.00.)
+  \item At t=0, the market starts at [99,101,t=0].
+  \item At t=1, the market stays at [99,101,t=1]. A customer order is submitted, but since you have not made any markets, it is ignored.
+  \item At t=2, the market changes to [99,102,t=2]. A customer order is submitted, but since you have not made any markets, it is ignored.
+  \item At t=3, the market changes to [98.5,101,t=3]. A customer order is submitted, but since you have not made any markets, it is ignored.
+  \item At t=4, the market changes to [99,101,t=4]. A customer order is submitted, but since you have not made any markets, it is ignored.
+  \item At t=5, your algo receives the first top-of-book update [99,101,5=0]. The market remains at [99,101,t=5]. You refresh your quotes (these are the first quotes you supply). Suppose you supply [98,100.5].
+  \item At t=6, a customer order is submitted for “Buy @ 100.5, t=6”. The market stays at [99,101,t=6]. Since your asking price is lower than the market’s you get hit - you sell 1 stock for \$100.5. You receive top-of-book update [99,101,t=1].
+  \item At t=7, a customer order is submitted for “Sell @ 99, t=7”. The market changes to [99,100,t=7]. Since your bid price is worse than the markets, you do not get hit. You receive top-of-book update [99,102,t=2].
+  \item At t=8, a customer order is submitted for “Buy @ 10, t=8”. The market stays at [99,100,t=8]. Since your ask price is worse than the markets, you do not get hit. You receive top-of-book update [98.5,101,t=3].
+  \item At t=9, a customer order is submitted for “Sell @ 99, t=9”. The market stays at [99,100,t=9]. Since your bid price is worse than the markets, you do not get hit. You receive top-of-book update [99,101,t=4].
+  \item At t=10, you receive top-of-book update [99,101,t=5]. You refresh your quotes, leaving them at [98.100.5]. 
+  \item At t=11, your algo receives information about the order-fill from t=1: “Buy @ 101, t=1”. A customer order is submitted for “Sell @ 99.2, t=11”. The market changes to [99,8,t=11]. Since your bid price is worse than the markets, you do not get hit. You receive top-of-book update [99,101,t=1]. 
+And so on.
+\end{itemize}
+
+\ \\
+\begin{center}3. Position Management\end{center}
+\begin{itemize}
+  \item You should keep track of your own PnL and position in the asset.
+  \item Position limits will be imposed. You are allowed to accumulate +/- 200 position in the asset. The penalty for exceeding the position limit will be the following:
+  \item If you have $>$ 200 position in the asset, you will immediately sell any position above the limit at 80\% of the top-of-book bid price NOT quoted by your algorithm.
+  \item If you have $<$ -200 position in the asset, you will immediately cover any position below the limit at 120\% of the top-of-book ask price NOT quoted by your algorithm.
+  \item Note that the penalty is imposed immediately, with no time delay as in the usual case of orders. This is executed through the positionPenalty function, so that you can update your PnL and net position.
+  \item At the end of each round, a long position will be liquidated at the better bid price between the two exchanges; a short position will be liquidated at the better ask price between the two exchanges. This means that it is slightly advantageous to clear your positions before the end of the round.
+\end{itemize}
+
+\ \\
+\begin{center}4. Price Evolution Process\end{center}
+The ‘true’ value of the asset will evolve according to a stochastic process. The midpoint of the best prices on each exchange will be independent noisy measures of this true value. In addition, the spread on either exchange will fluctuate over time; there will be both an independent component to the spread and a component correlated with the size of movements in the exchange’s midpoint price.
+
+At each tick, the quotes at the top of the book have a random chance of being hit by a customer’s order. In addition, your quote will be hit if your bid is higher than the best ask or your ask is lower than the best bid on than exchange.
+
+Your strategy will profit on the basis of the price evolution process and fill procedure. Possible phenomena to consider include:
+Since the deviation of the midpoints of the two exchanges evolve independently, it may be possible to arbitrage between the two exchanges. Particularly, price shocks might be introduced in one exchange before the other, creating a temporary pure arbitrage opportunity.
+Using the prices of both exchanges, it may be possible to estimate the value and movement of the true value of the asset.
+In periods of great uncertainty or volatility, it may be wise to widen your markets. Correspondingly, in periods of lower uncertainty, it may be wise to narrow your markets.
+If you have accumulated a large net long (short) position, it may be advantageous to shift your markets down (up).
+
+\ \\
+\begin{center}5. Tips\end{center}
+\begin{itemize}
+  \item Your algorithm should in general be profiting from market-making activity. This means that your algorithm should typically be sitting within the top-of-book quotes from other market-makers unless you have good reason not to (e.g. your algorithm detects large price volatility).
+  \item Also note that any trades that happen will happen at prices you quote. Quote narrow prices means that you may get higher quantity of trades that are less profitable. Conversely, wide quotes will lead to you doing less trades. Your strategy should balance these considerations, as well as considerations about the volatility of price movements.
+  \item The price evolution process is expected to change completely within rounds. This means that your algorithm should not expect to reuse information between rounds, as none of it will be relevant.
+  \item Keep an eye on cross-exchange trading opportunities. If the prices on both exchanges appear out of line, you should move to take advantage of that. Even if no pure arbitrage opportunity has arisen, remember that your information is delayed, so pure arbitrage (or profitable customer trades) may arise before you are informed about it. It thus pays to consider a kind of statistical arbitrage approach. Who knows, maybe some pure arbitrage opportunities will arise too!
+  \item Except in very special situations, your algorithm should not be prop-trading. This is, after all, a market-making case. Your algorithm can technically “prop-trade” by trading against the other market-makers when your bid is above their ask or vice versa, but note that these prices will typically be extremely disadvantageous for you. You should only resort to exploiting this mechanism if you have a legitimate reason for wanting to exit a position quickly (e.g. nearing position limits).
+  \item Try to leave a buffer between your net position and the position limits. Especially since information is lagged, you may be making trades and accidentally bust the position limit before you realize it. Remember that a market-maker should ideally be flipping rather than holding positions.
+  \item Have fun!
+\end{itemize}
+
+\pagebreak
+
+\ \\
+\begin{center}6. Interface\end{center}
+
+You will be implementing the following four methods for your strategy. Note that you only return your quotes on the refreshQuotes() method; all other methods are called to supply your algorithm with information.
+\begin{framed}
+\begin{verbatim}Quote[] refreshQuotes()\end{verbatim}
+This method is called every 5 ticks to refresh your quotes on both exchanges. Note that the quotes will only arrive on the exchanges with a time lag.
+
+\textbf{Arguments}: \\
+N/A
+
+\textbf{Returns}: \\
+A length-2 array of Quote objects. See below for the structure of Quote objects.
+\end{framed}
+
+\begin{framed}
+\begin{verbatim}void fillNotice(Exchange exchange, double price, AlgoSide algoside)\end{verbatim}
+Will be called whenever a quote on either of your exchanges has been hit by either a customer or a market-maker. Note that this information is 5 ticks old.
+
+\textbf{Arguments}: \\
+exchange is enum type representing one of the two exchanges. They will be of the value Exchange.ROBOT or Exchange.SNOW.
+price is the price at which the quote was filled.
+algoside is enum type representing one of the two exchanges. They will be of the value AlgoSide.ALGOBUY or AlgoSide.ALGOSELL. AlgoSide.ALGOBUY refers to your algorithm buying a position, and AlgoSide.ALGOSELL refers to your algorithm selling.
+
+\textbf{Returns}: \\
+N/A
+\end{framed}
+
+\begin{framed}
+\begin{verbatim}void newTopOfBook(Quote[] quotes)\end{verbatim}
+Will be called whenever the prices at the top of the book changes. Note that this information is 5 ticks old.
+
+\textbf{Arguments}: \\
+quotes is a length-2 array of Quote objects. These will be the quotes from both exchanges.
+
+\textbf{Returns}: \\
+N/A
+\end{framed}
+
+\begin{framed}
+\begin{verbatim}void positionPenalty(int clearedQuantity, double price)\end{verbatim}
+Will be called when you violate the position limits. 
+
+\textbf{Arguments}: \\
+clearedQuantity is the position that has been cleared following the penalty. If this is a positive number, that means that you have been forced to sell an excess long position; if it is negative, that means that you have been forced to cover an excess short position.
+
+price is the price at which the position is cleared. Note that this will be at 80\% of the TOB bid if you’re selling a long position, and 120\% of the TOB ask if you’re covering a short position.
+
+\textbf{Returns}: \\
+N/A
+\end{framed}
+
+
+\ \\
+\begin{center}7. Code\end{center}
+\textbf{Interface Code}
+\begin{framed}
+\begin{verbatim}
+public static interface ArbCase {
+	
+    void fillNotice(Exchange exchange, double price, AlgoSide algoside);
+	
+    void positionPenalty(int clearedQuantity, double price);
+	
+    void newTopOfBook(Quote[] quotes);
+	
+    Quote[] refreshQuotes();
+	
+}
+\end{verbatim}
+\end{framed}
+
+\textbf{Quote Class}
+\begin{framed}
+A Quote is an object containing information about quotes on an exchange. They are used both for quotes supplied by you, as well as top-of-book quotes from other market-makers. Note that Quotes contain information from a single exchange, so they tend to be sent out in pairs in length-2 arrays. For consistency, Quote-arrays will always be ordered with ROBOT first and SNOW second.
+
+Quotes can be initiated in something like following:
+\begin{verbatim}Quote q = new Quote(Exchange.SNOW, 99.0, 101.0);\end{verbatim}
+
+\end{framed}
+
+\ \\
+\begin{center}8. Sample Implementation\end{center}
+Suppose we had a very simplistic strategy which always sets the trader’s orders \$0.20 above the best ask and \$0.20 below the best bid. The sample implementation can be found in the package of Example implementation. It should work out of the box (i.e. you should be able to upload it to onRamp and have it work), but it is a pretty silly algorithm, and you should aim to write one that outperforms it by far.
+
+\end{document}

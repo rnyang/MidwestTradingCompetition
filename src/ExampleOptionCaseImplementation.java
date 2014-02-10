@@ -73,7 +73,6 @@ public class ExampleOptionCaseImplementation extends AbstractOptionsCase {
 		public void orderFilled(String idSymbol, double price, int quantity) {
 			log("My order for " + idSymbol + " got filled at " + price + " with quantity of " + quantity);
 		}
-		
 	}
 
 	@Override

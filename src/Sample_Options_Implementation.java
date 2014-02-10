@@ -102,6 +102,7 @@ public class Sample_Options_Implementation extends AbstractOptionsCase {
 		public void penaltyFill(String idSymbol, double price, int quantity) {
 			
 		}
+
 	}
 
 	public OptionsCase getOptionCaseImplementation() {
