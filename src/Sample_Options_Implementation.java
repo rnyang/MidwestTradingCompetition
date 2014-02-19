@@ -5,8 +5,8 @@ import org.chicago.cases.AbstractOptionsCase;
 import org.chicago.cases.options.OptionSignals.AdminMessage;
 import org.chicago.cases.options.OptionSignals.ForecastMessage;
 import org.chicago.cases.options.OptionSignals.VolUpdate;
-import org.chicago.cases.options.OrderInfo.OrderSide;
 import org.chicago.cases.options.OrderInfo;
+import org.chicago.cases.options.OrderInfo.OrderSide;
 
 import com.optionscity.freeway.api.IDB;
 import com.optionscity.freeway.api.IJobSetup;
@@ -99,9 +99,10 @@ public class Sample_Options_Implementation extends AbstractOptionsCase {
 			
 		}	
 		
-		public void penaltyLiquidation(String idSymbol, double price, int quantity) {
+		public void penaltyFill(String idSymbol, double price, int quantity) {
 			
 		}
+
 	}
 
 	public OptionsCase getOptionCaseImplementation() {

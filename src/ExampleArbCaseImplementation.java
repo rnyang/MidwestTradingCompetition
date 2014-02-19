@@ -27,25 +27,10 @@ public class ExampleArbCaseImplementation extends AbstractExchangeArbCase {
 			myDatabase = database;
 			factor = getIntVar("someFactor"); // helper method for accessing declared variables
 		}
-		
-		@Override
-		public void initialize(Quote[] startingQuotes) {
-			for (Quote quote : startingQuotes) {
-				log("Initial bid of " + quote.bidPrice + ", and ask of " + quote.askPrice + " from " + quote.exchange);
-			}
-			double[] desiredRobotPrices = new double[2];
-			desiredRobotPrices[0] = startingQuotes[0].bidPrice + 0.2;
-			desiredRobotPrices[1] = startingQuotes[0].askPrice - 0.2;
-
-			double[] desiredSnowPrices = new double[2];
-			desiredSnowPrices[0] = startingQuotes[1].bidPrice + 0.2;
-			desiredSnowPrices[1] = startingQuotes[1].askPrice - 0.2;
-		}
 
 		@Override
 		public void fillNotice(Exchange exchange, double price, AlgoSide algoside) {
 			log("My quote was filled with at a price of " + price + " on " + exchange + " as a " + algoside);
-
 			if(algoside == AlgoSide.ALGOBUY){
 				position += 1;
 			}else{
