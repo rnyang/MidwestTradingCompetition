@@ -272,7 +272,7 @@ public abstract class OldArbCase extends AbstractJob {
 		* 
 		*/
 		public void processQueue(int tick){
-			while (!this.queue.isEmpty() && this.queue.peek().tick >= tick){
+			while (!this.queue.isEmpty() && this.queue.peek().deliveryTick >= tick){
 				QueueEvent event = this.queue.poll();
 
 				if(event instanceof DelayedOrderFill){

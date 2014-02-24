@@ -9,10 +9,10 @@ import org.chicago.cases.arb.Quote;
 
 public abstract class QueueEvent {
 
-	public final int tick;
+	public final int deliveryTick;
 	
-	protected QueueEvent(int tick) {
-		this.tick = tick;
+	protected QueueEvent(int deliveryTick) {
+		this.deliveryTick = deliveryTick;
 	}
 	
 	public static class DelayedOrderFill extends QueueEvent {
@@ -22,8 +22,8 @@ public abstract class QueueEvent {
 		public final Exchange exchange;
 		
 		
-		public DelayedOrderFill(int tick, AlgoSide algoside, double price, Exchange exchange) {
-			super(tick);
+		public DelayedOrderFill(int deliveryTick, AlgoSide algoside, double price, Exchange exchange) {
+			super(deliveryTick);
 			this.algoside = algoside;
 			this.price = price;
 			this.exchange = exchange;	
@@ -35,8 +35,8 @@ public abstract class QueueEvent {
 
 		public final Quote[] quotes;
 
-		public DelayedTopOfBook(int tick, Quote[] quotes) {
-			super(tick);
+		public DelayedTopOfBook(int deliveryTick, Quote[] quotes) {
+			super(deliveryTick);
 			this.quotes = quotes;
 		}
 	}

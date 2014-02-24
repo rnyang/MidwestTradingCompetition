@@ -25,7 +25,9 @@ public class ExampleArbCaseImplementation extends AbstractExchangeArbCase {
 		public void initializeAlgo(IDB database) {
 			// Databases can be used to store data between rounds
 			myDatabase = database;
-			factor = getIntVar("someFactor"); // helper method for accessing declared variables
+			
+			database.put("currentPosition", 10);
+			int currentPosition = (Integer)database.get("currentPosition");
 		}
 
 		@Override
