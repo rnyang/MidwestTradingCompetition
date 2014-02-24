@@ -4,9 +4,9 @@ import java.util.Date;
 import java.util.List;
 
 import org.chicago.cases.options.OptionSignalProcessor;
-import org.chicago.cases.options.OptionSignals.AdminMessage;
 import org.chicago.cases.options.OptionSignals.ForecastMessage;
 import org.chicago.cases.options.OptionSignals.OrderRequestMessage;
+import org.chicago.cases.options.OptionSignals.RiskMessage;
 import org.chicago.cases.options.OptionSignals.VolUpdate;
 import org.chicago.cases.options.OrderInfo;
 import org.chicago.cases.options.OrderInfo.OrderSide;
@@ -18,6 +18,7 @@ import com.optionscity.freeway.api.AbstractJob;
 import com.optionscity.freeway.api.IContainer;
 import com.optionscity.freeway.api.IDB;
 import com.optionscity.freeway.api.IJobSetup;
+import com.optionscity.freeway.api.InstrumentDetails;
 import com.optionscity.freeway.api.Order;
 import com.optionscity.freeway.api.Prices;
 import com.optionscity.freeway.api.messages.MarketBidAskMessage;
@@ -43,7 +44,7 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 			
 			void initializeAlgo(IDB dataBase);
 			
-			void newAdminMessage(AdminMessage msg);
+			void newRiskMessage(RiskMessage msg);
 			
 			void newForecastMessage(ForecastMessage msg);
 			
@@ -132,9 +133,9 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 		}
 
 
-		public void onSignal(AdminMessage msg) {
+		public void onSignal(RiskMessage msg) {
 			log("Received new admin message");
-			implementation.newAdminMessage(msg);
+			implementation.newRiskMessage(msg);
 		}
 		
 		public void onSignal(ForecastMessage msg) {
@@ -152,13 +153,17 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 			OrderInfo[] orders = implementation.placeOrders();
 			for (OrderInfo order : orders) {
 				Order.Side side = (order.side == OrderSide.BUY) ? Order.Side.BUY : Order.Side.SELL;
+				String idSymbol = order.idSymbol;
+				Prices price = instruments().getAllPrices(idSymbol);
+				double tradePrice = (order.side == OrderSide.BUY) ? price.ask : price.bid;
 				long id = trades().manualTrade(order.idSymbol,
 						 order.quantity,
-						 order.price,
+						 tradePrice,
 						 side,
 						 new Date(),
 						 null, null, null, null, null, null);
-				implementation.orderFilled(order.idSymbol, order.price, order.quantity);
+				implementation.orderFilled(order.idSymbol, tradePrice, order.quantity);
+				
 			}
 		}
 		

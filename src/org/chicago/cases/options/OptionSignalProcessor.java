@@ -1,6 +1,6 @@
 package org.chicago.cases.options;
 
-import org.chicago.cases.options.OptionSignals.AdminMessage;
+import org.chicago.cases.options.OptionSignals.RiskMessage;
 import org.chicago.cases.options.OptionSignals.ForecastMessage;
 import org.chicago.cases.options.OptionSignals.OrderRequestMessage;
 import org.chicago.cases.options.OptionSignals.VolUpdate;
@@ -37,7 +37,7 @@ public class OptionSignalProcessor implements ISignalProcessor {
 			double maxGamma = Double.parseDouble(parts[4]);
 			double minVega = Double.parseDouble(parts[5]);
 			double maxVega = Double.parseDouble(parts[6]);
-			signal = new AdminMessage(minDelta, maxDelta, minGamma, maxGamma, minVega, maxVega);
+			signal = new RiskMessage(minDelta, maxDelta, minGamma, maxGamma, minVega, maxVega);
 		}
 		else if (msgType.equalsIgnoreCase("Orders")) {
 			signal = new OrderRequestMessage();

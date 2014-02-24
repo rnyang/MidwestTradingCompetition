@@ -37,7 +37,7 @@ public class OptionSignals {
 		
 	}
 	
-	public static class AdminMessage extends Signal {
+	public static class RiskMessage extends Signal {
 		
 		public final double minDelta;
 		public final double minGamma;
@@ -46,8 +46,8 @@ public class OptionSignals {
 		public final double maxGamma;
 		public final double maxVega;
 		
-		public AdminMessage(double minDelta, double maxDelta, double minGamma, double maxGamma, double minVega, double maxVega) {
-			super(AdminMessage.class.getSimpleName());
+		public RiskMessage(double minDelta, double maxDelta, double minGamma, double maxGamma, double minVega, double maxVega) {
+			super(RiskMessage.class.getSimpleName());
 			this.minDelta = minDelta;
 			this.minGamma = minGamma;
 			this.minVega = minVega;
