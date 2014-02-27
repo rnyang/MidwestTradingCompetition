@@ -28,7 +28,7 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 	private static final int DEFAULT_QUANTITY = 1;
 	private static final int TOB_DELAY = 5;
 	private static final int FILL_DELAY = 5;
-	private static final int MAX_SHORT = 200;
+	private static final int MAX_SHORT = -200;
 	private static final int MAX_LONG = 200;
 	
 	// ---------------- Define Case Interface and abstract method ----------------
@@ -106,7 +106,7 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 				container.filterMarketMessages(product + ";;;;;;");
 				log("filtering for " + product);
 			}
-			myInstrument = products.get(0);
+			myInstrument = products.get(0) + "-E";
 		
 			container.subscribeToSignals();
 			container.subscribeToMarketBidAskMessages();
@@ -124,7 +124,7 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 		
 		public void onSignal(TopOfBookUpdate signal) {
 			internalLog("New TOB - Current tick is " + currentTick);
-			currentTick += 1;
+			
 			
 			// Add message to manager
 			Quote[] quotes = new Quote[2];
@@ -137,7 +137,7 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 			// Process delayed messages before potentially asking for new quotes
 			processCurrentTick();
 			
-			if ((currentTick % 5) == 0) {
+			if ((currentTick > 0) && ((currentTick % 5) == 0)) {
 				myQuotes = implementation.refreshQuotes();
 				internalLog("Set my quotes to " + quotesToString(quotes));
 			}
@@ -150,6 +150,8 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 			}
 			
 			processPositions();
+			
+			currentTick += 1;
 		}
 
 
@@ -196,6 +198,8 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 		private void processCurrentTick() {
 			
 			List<QueueEvent> events = latencyManager.getAllEventsForTick(currentTick);
+			if (events == null)
+				return;
 			for (QueueEvent event : events) {
 				internalLog("Delivering delayed event " + event.getClass().getSimpleName() + " at tick " + currentTick);
 				if (event instanceof DelayedTopOfBook) {

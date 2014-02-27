@@ -14,8 +14,8 @@ public class ExampleArbCaseImplementation extends AbstractExchangeArbCase {
 		int factor;
 
 		int position;
-		double[] desiredRobotPrices;
-		double[] desiredSnowPrices;
+		double[] desiredRobotPrices = new double[2];
+		double[] desiredSnowPrices = new double[2];
 
 		public void addVariables(IJobSetup setup) {
 			// Registers a variable with the system.
@@ -32,7 +32,7 @@ public class ExampleArbCaseImplementation extends AbstractExchangeArbCase {
 
 		@Override
 		public void fillNotice(Exchange exchange, double price, AlgoSide algoside) {
-			log("My quote was filled with at a price of " + price + " on " + exchange + " as a " + algoside);
+			//log("My quote was filled with at a price of " + price + " on " + exchange + " as a " + algoside);
 			if(algoside == AlgoSide.ALGOBUY){
 				position += 1;
 			}else{
@@ -49,9 +49,12 @@ public class ExampleArbCaseImplementation extends AbstractExchangeArbCase {
 		@Override
 		public void newTopOfBook(Quote[] quotes) {
 			for (Quote quote : quotes) {
-				log("I received a new bid of " + quote.bidPrice + ", and ask of " + quote.askPrice + " from " + quote.exchange);
+				//log("I received a new bid of " + quote.bidPrice + ", and ask of " + quote.askPrice + " from " + quote.exchange);
 			}
 
+			desiredRobotPrices = new double[2];
+			desiredSnowPrices = new double[2];
+			
 			desiredRobotPrices[0] = quotes[0].bidPrice + 0.2;
 			desiredRobotPrices[1] = quotes[0].askPrice - 0.2;
 
