@@ -252,28 +252,28 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 						internalLog("Matching bidPrice of " + price + " against askPrice of " + quote.askPrice);
 						if (price >= quote.askPrice) {
 							internalLog("Successful match");
-							positionCount += 1;
+							positionCount -= 1;
 							long id = trades().manualTrade(myInstrument,
 									 DEFAULT_QUANTITY,
 									 quote.askPrice,
-									 com.optionscity.freeway.api.Order.Side.BUY,
+									 com.optionscity.freeway.api.Order.Side.SELL,
 									 new Date(),
 									 null, null, null, null, null, null);
-							return new DelayedOrderFill(currentTick + FILL_DELAY, AlgoSide.ALGOBUY, quote.askPrice, exchange);
+							return new DelayedOrderFill(currentTick + FILL_DELAY, AlgoSide.ALGOSELL, quote.askPrice, exchange);
 						}
 					}
 					else {
 						internalLog("Matching bidPrice of " + price + " against askPrice of " + quote.askPrice);
 						if (price <= quote.bidPrice) {
 							internalLog("Successful match");
-							positionCount -= 1;
+							positionCount += 1;
 							long id = trades().manualTrade(myInstrument,
 									 DEFAULT_QUANTITY,
 									 quote.bidPrice,
-									 com.optionscity.freeway.api.Order.Side.SELL,
+									 com.optionscity.freeway.api.Order.Side.BUY,
 									 new Date(),
 									 null, null, null, null, null, null);
-							return new DelayedOrderFill(currentTick + FILL_DELAY, AlgoSide.ALGOSELL, quote.bidPrice, exchange);
+							return new DelayedOrderFill(currentTick + FILL_DELAY, AlgoSide.ALGOBUY, quote.bidPrice, exchange);
 						}
 					}
 				}
