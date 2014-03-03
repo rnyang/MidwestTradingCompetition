@@ -14,6 +14,16 @@ public class OptionSignals {
 		}
 	}
 	
+	public static class ProcessPenaltyRequest extends Signal {
+		
+		public final double underlyingPrice;
+		
+		public ProcessPenaltyRequest(double underlyingPrice) {
+			super(ProcessPenaltyRequest.class.getSimpleName());
+			this.underlyingPrice = underlyingPrice;
+		}
+	}
+	
 	public static class ForecastMessage extends Signal {
 		
 		public final double delta;

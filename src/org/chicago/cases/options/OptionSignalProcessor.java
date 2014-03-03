@@ -1,8 +1,9 @@
 package org.chicago.cases.options;
 
-import org.chicago.cases.options.OptionSignals.RiskMessage;
 import org.chicago.cases.options.OptionSignals.ForecastMessage;
 import org.chicago.cases.options.OptionSignals.OrderRequestMessage;
+import org.chicago.cases.options.OptionSignals.ProcessPenaltyRequest;
+import org.chicago.cases.options.OptionSignals.RiskMessage;
 import org.chicago.cases.options.OptionSignals.VolUpdate;
 
 import com.optionscity.freeway.api.messages.Signal;
@@ -41,6 +42,10 @@ public class OptionSignalProcessor implements ISignalProcessor {
 		}
 		else if (msgType.equalsIgnoreCase("Orders")) {
 			signal = new OrderRequestMessage();
+		}
+		else if (msgType.equalsIgnoreCase("Penalty")) {
+			double underlyingPrice = (parts[1].isEmpty()) ? Double.NaN : Double.parseDouble(parts[1]);
+			signal = new ProcessPenaltyRequest(underlyingPrice);
 		}
 		else {
 			throw new IllegalStateException("Signal string does not follow the required format");

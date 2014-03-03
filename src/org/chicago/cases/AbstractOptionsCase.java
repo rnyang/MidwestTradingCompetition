@@ -2,10 +2,13 @@ package org.chicago.cases;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.chicago.cases.options.OptionSignalProcessor;
 import org.chicago.cases.options.OptionSignals.ForecastMessage;
 import org.chicago.cases.options.OptionSignals.OrderRequestMessage;
+import org.chicago.cases.options.OptionSignals.ProcessPenaltyRequest;
 import org.chicago.cases.options.OptionSignals.RiskMessage;
 import org.chicago.cases.options.OptionSignals.VolUpdate;
 import org.chicago.cases.options.OrderInfo;
@@ -18,7 +21,6 @@ import com.optionscity.freeway.api.AbstractJob;
 import com.optionscity.freeway.api.IContainer;
 import com.optionscity.freeway.api.IDB;
 import com.optionscity.freeway.api.IJobSetup;
-import com.optionscity.freeway.api.InstrumentDetails;
 import com.optionscity.freeway.api.Order;
 import com.optionscity.freeway.api.Prices;
 import com.optionscity.freeway.api.messages.MarketBidAskMessage;
@@ -26,6 +28,30 @@ import com.optionscity.freeway.api.messages.MarketBidAskMessage;
 public abstract class AbstractOptionsCase extends AbstractJob {
 	
 		private static final long STAT_REFRESH = 1000;
+		private static final double RATE = 0.01;
+		
+		private long position = 0;
+		private RiskMessage currentLimits;
+		private double currentUnderlying = 0;
+		private String underlyingSymbol;
+		private int currentTime = 0;
+		
+		private Map<String, Integer> positionMap = new ConcurrentHashMap<String, Integer>();
+		
+		class PortfolioRisk {
+			
+			private final double delta;
+			private final double gamma;
+			private final double vega;
+			
+			private PortfolioRisk(double delta, double gamma, double vega) {
+				this.delta = delta;
+				this.gamma = gamma;
+				this.vega = vega;
+			}
+			
+		}
+		
 	
 		// ---------------- Define Case Interface and abstract method ----------------
 		/*
@@ -59,6 +85,7 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 			void penaltyFill(String idSymbol, double price, int quantity);
 			
 		}
+		
 		
 
 		
@@ -109,6 +136,11 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 				instruments().startSymbol(product);
 				container.filterMarketMessages(product + ";;;;;;");
 				log("filtering for " + product);
+				positionMap.put(product, 0);
+				if (product.contains("-E")) {
+					underlyingSymbol = product;
+					log("underlying product is " + underlyingSymbol);
+				}
 			}
 		
 			
@@ -127,27 +159,44 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 		
 		@Override
 		public void onMarketBidAsk(MarketBidAskMessage msg) {
-			log("Received TOB " + msg.instrumentId);
 			Prices prices = instruments().getAllPrices(msg.instrumentId);
 			implementation.newBidAsk(msg.instrumentId, prices.bid, prices.ask);
+			if (msg.instrumentId.equals(underlyingSymbol))
+				currentTime += 1;
 		}
 
 
 		public void onSignal(RiskMessage msg) {
-			log("Received new admin message");
 			implementation.newRiskMessage(msg);
 		}
 		
 		public void onSignal(ForecastMessage msg) {
-			log("Received new forecast message");
 			implementation.newForecastMessage(msg);
 		}
 		
 		public void onSignal(VolUpdate msg) {
-			log("Received new vol update message");
 			implementation.newVolUpdate(msg);
 		}
 		
+		public void onSignal(ProcessPenaltyRequest msg) {
+			double underlyingPrice = msg.underlyingPrice;
+			if (underlyingPrice == Double.NaN) {
+				Prices prices = instruments().getAllPrices(underlyingSymbol);
+				underlyingPrice = (prices.ask + prices.bid) / 2;
+			}
+			PortfolioRisk risk = calculateRisk();
+			if (risk.delta > currentLimits.maxDelta) {
+				// liquidate delta
+			}
+			// liquidate vega and gamma
+		}
+		
+		private PortfolioRisk calculateRisk() {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+
 		public void onSignal(OrderRequestMessage msg) {
 			log("Received new order request message");
 			OrderInfo[] orders = implementation.placeOrders();
@@ -156,15 +205,28 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 				String idSymbol = order.idSymbol;
 				Prices price = instruments().getAllPrices(idSymbol);
 				double tradePrice = (order.side == OrderSide.BUY) ? price.ask : price.bid;
+				int tradeQuantity = (order.side == OrderSide.BUY) ? order.quantity : -order.quantity;
 				long id = trades().manualTrade(order.idSymbol,
 						 order.quantity,
 						 tradePrice,
 						 side,
 						 new Date(),
 						 null, null, null, null, null, null);
-				implementation.orderFilled(order.idSymbol, tradePrice, order.quantity);
-				
+				implementation.orderFilled(order.idSymbol, tradePrice, tradeQuantity);
+				position += tradeQuantity;
+				recordPosition(order.idSymbol, tradeQuantity);
+				log("System filled order of side, " + order.side + " at price, " + tradePrice);
 			}
+		}
+
+
+		private void recordPosition(String idSymbol, int tradeQuantity) {
+			int currentPosition = 0;
+			if (positionMap.containsKey(idSymbol)) {
+				currentPosition = positionMap.get(idSymbol);
+			}
+			currentPosition += tradeQuantity;
+			positionMap.put(idSymbol, currentPosition);
 		}
 		
 }

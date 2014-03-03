@@ -6,7 +6,7 @@ import org.chicago.cases.arb.Quote;
 import com.optionscity.freeway.api.IDB;
 import com.optionscity.freeway.api.IJobSetup;
 
-public class ExampleArbCaseImplementation extends AbstractExchangeArbCase {
+public class AdminExample extends AbstractExchangeArbCase {
 	
 	class MySampleArbImplementation implements ArbCase {
 		
