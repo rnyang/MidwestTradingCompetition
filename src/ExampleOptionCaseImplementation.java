@@ -37,23 +37,24 @@ public class ExampleOptionCaseImplementation extends AbstractOptionsCase impleme
 
 	public void newBidAsk(String idSymbol, double bid, double ask) {
 		InstrumentDetails details = instruments().getInstrumentDetails(idSymbol);
-		log("I received a new bid of " + bid + ", and ask of " + ask + ", for " + idSymbol);
+		//log("I received a new bid of " + bid + ", and ask of " + ask + ", for " + idSymbol);
+		knownSymbols.add(idSymbol);
 	}
 
 	public void orderFilled(int volume, double fillPrice) {
-		log("My order was filled with qty of " + volume + " at a price of " + fillPrice);
+		//log("My order was filled with qty of " + volume + " at a price of " + fillPrice);
 	}
 
 	public void newRiskMessage(RiskMessage msg) {
-		log("I received an admin message!");
+		//log("I received an admin message!");
 	}
 
 	public void newForecastMessage(ForecastMessage msg) {
-		log("I received a forecast message!");
+		//log("I received a forecast message!");
 	}
 	
 	public void newVolUpdate(VolUpdate msg) {
-		log("I received a vol update message!");
+		//log("I received a vol update message!");
 	}
 	
 	public void penaltyFill(String idSymbol, double price, int quantity) {
@@ -63,7 +64,6 @@ public class ExampleOptionCaseImplementation extends AbstractOptionsCase impleme
 	public OrderInfo[] placeOrders() {
 		// Place a buy order of 100.00 with qty of 10 for every symbol we know of
 		// Note: Just a 'dummy' implementation.
-		log("Placing orders");
 		OrderInfo[] orders = new OrderInfo[1];
 		String symbol = knownSymbols.get(1);
 		orders[0] = new OrderInfo(symbol, OrderSide.BUY, -1000, 10);
@@ -72,7 +72,7 @@ public class ExampleOptionCaseImplementation extends AbstractOptionsCase impleme
 	}
 
 	public void orderFilled(String idSymbol, double price, int quantity) {
-		log("My order for " + idSymbol + " got filled at " + price + " with quantity of " + quantity);
+		//log("My order for " + idSymbol + " got filled at " + price + " with quantity of " + quantity);
 	}
 
 

@@ -149,15 +149,20 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 				instruments().startSymbol(product);
 				container.filterMarketMessages(product + ";;;;;;");
 				log("filtering for " + product);
-				positionMap.put(product, 0);
-				if (product.contains("-E")) {
-					underlyingSymbol = product;
-					log("underlying product is " + underlyingSymbol);
-				}
-				else {
-					optionList.add(product);
+				underlyingSymbol = product + "-E";
+				internalLog("underlying set to " + underlyingSymbol);
+				positionMap.put(underlyingSymbol, 0);
+			}
+			
+			products = InstrumentUtilities.getOptionsForCase(Case.OPTIONS);
+			for (String option : products) {
+				if (option.contains(teamCode)) {
+					positionMap.put(option, 0);
+					internalLog("registered option, " + option);
+					optionList.add(option);
 				}
 			}
+			
 		
 			
 			container.subscribeToMarketBidAskMessages();
@@ -178,11 +183,12 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 			implementation.newBidAsk(msg.instrumentId, prices.bid, prices.ask);
 			if (msg.instrumentId.equals(underlyingSymbol)) {
 				updateTimeData();
-				currentUnderlying = (prices.ask + prices.bid) / 2; // midpoint
+				currentUnderlying = (prices.ask + prices.bid) / 2.0; // midpoint
 			}
 		}
 
 		public void onSignal(RiskMessage msg) {
+			currentLimits = msg;
 			implementation.newRiskMessage(msg);
 		}
 		
@@ -201,9 +207,11 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 				return;
 			}
 			
+			internalLog("----------------------------------------");
+			
 			// Get underlying price to use
 			double underlyingPrice = msg.underlyingPrice;
-			if (underlyingPrice == Double.NaN) {
+			if (underlyingPrice == Double.MIN_VALUE) {
 				underlyingPrice = currentUnderlying;
 			}
 			
@@ -212,14 +220,13 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 			
 			// Get instrument to offset with
 			String option = getFrontMonthATM();
-			internalLog("using " + option + " to reduce gamma and vega risk");
+			
 			
 			Prices optionPrices = instruments().getAllPrices(option);
 			InstrumentDetails details = instruments().getInstrumentDetails(option);
 			double vega = Optionsutil.calculateVega(underlyingPrice, details.strikePrice, daysToMayExp, RATE, currentVol);
 			double gamma = Optionsutil.calculateGamma(underlyingPrice, details.strikePrice, daysToMayExp, RATE, currentVol);
 			double delta = Optionsutil.calculateDelta(underlyingPrice, details.strikePrice, daysToMayExp, RATE, currentVol);
-			internalLog("ask= " + optionPrices.ask + ", bid=" + optionPrices.bid + ", v=" + vega + ", g=" + gamma + ", d=" + delta);
 			
 			
 			// Handle vega or gamma
@@ -230,12 +237,12 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 			double deltaOffset = 0;
 			internalLog("running penalty liquidation logic");
 			internalLog("current limits are, mng=" + currentLimits.minGamma + ", mxg=" + currentLimits.minGamma + ", mnv=" + currentLimits.minVega + ", mxv=" + currentLimits.maxVega + ", mnd=" + currentLimits.minDelta + ", mxd=" + currentLimits.maxDelta);
-			internalLog("risk is, g=" + risk.gamma + ", v=" + risk.vega + ", d=" + risk.delta);
+			internalLog("portfolio risk is, gamma=" + risk.gamma + ", vega=" + risk.vega + ", delta=" + risk.delta);
 			if (risk.gamma > currentLimits.maxGamma || risk.gamma < currentLimits.minGamma) {
 				gammaNeeded = (risk.gamma > currentLimits.maxGamma) ? currentLimits.maxGamma - risk.gamma : currentLimits.minGamma - risk.gamma;
 			}
 			if (risk.vega > currentLimits.maxVega || risk.vega < currentLimits.minVega) {
-				gammaNeeded = (risk.vega > currentLimits.maxVega) ? currentLimits.maxVega - risk.vega : currentLimits.minVega - risk.vega;
+				vegaNeeded = (risk.vega > currentLimits.maxVega) ? currentLimits.maxVega - risk.vega : currentLimits.minVega - risk.vega;
 			}
 			
 			if (gammaNeeded != 0 || vegaNeeded != 0) {
@@ -250,6 +257,9 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 					tradeQuantity = vegaNeeded / vega;
 					internalLog("using vega to hedge, needed=" + vegaNeeded + ", vega=" + vega + " qty=" + tradeQuantity);
 				}
+				
+				internalLog("using " + option + " to reduce risk");
+				internalLog("instrument details, ask= " + optionPrices.ask + ", bid=" + optionPrices.bid + ", v=" + vega + ", g=" + gamma + ", d=" + delta);
 				
 				// Make trade
 				double priceToLiquidate = (tradeQuantity > 0) ? optionPrices.ask * 1.05 : optionPrices.bid * 0.95;
@@ -295,7 +305,7 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 		
 		private String getFrontMonthATM() {
 			Calendar cal = Calendar.getInstance();
-			double closestPrice = Double.NaN;
+			double closestPrice = Double.MIN_VALUE;
 			String chosenOption = null;
 			for (String option : optionList) {
 				InstrumentDetails details = instruments().getInstrumentDetails(option);
@@ -304,10 +314,11 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 					Prices prices = instruments().getAllPrices(option);
 					double midPoint = (prices.bid + prices.ask) / 2;
 					double distance = currentUnderlying - midPoint;
-					if ((closestPrice == Double.NaN) || (Math.abs(distance) < Math.abs(closestPrice))) {
+					if ((closestPrice == Double.MIN_VALUE) || (Math.abs(distance) < Math.abs(closestPrice))) {
 						chosenOption = option;
 						closestPrice = distance;
 					}
+					
 				}
 			}
 			return chosenOption;
@@ -324,8 +335,6 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 		}
 		
 		private PortfolioRisk calculateRisk(double spot, double interestRate, double vol) {
-			internalLog("calculating risk, spot=" + spot + ", currentTime=" + currentTime + ", vol=" + vol + ", rate=" + interestRate);
-			
 			Calendar cal = Calendar.getInstance();
 			
 			double delta = 0;
@@ -336,7 +345,7 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 			// Set delta to current underlying position count
 			int underlyingPosition = positionMap.get(underlyingSymbol);
 			delta += underlyingPosition;
-			internalLog("underlying, pos=" + underlyingPosition + ", delta=" + delta);
+			//internalLog("underlying, pos=" + underlyingPosition + ", delta=" + delta);
 			
 			// Aggregate greeks for each options
 			for (String option : optionList) {
@@ -346,25 +355,22 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 				cal.setTime(detail.expiration);
 				int monthCode = cal.get(Calendar.MONTH);
 				int days = (monthCode == Calendar.MAY) ? daysToMayExp : daysToJuneExp;
-				internalLog("using daysToExpiration= " + days +", for expiration of " + detail.displayExpiration);
-				
+
 				// Calculate and add risk
-				double instrumentVega = Optionsutil.calculateVega(spot, detail.strikePrice, days, interestRate, vol);
-				double instrumentDelta = Optionsutil.calculateDelta(spot, detail.strikePrice, days, interestRate, vol);
-				double instrumentGamma = Optionsutil.calculateGamma(spot, detail.strikePrice, days, interestRate, vol);
-				internalLog("adding risk for " + option + ", pos=" + position + ", v=" + instrumentVega + ", g=" + instrumentGamma + ", d=" + instrumentDelta);
+				double instrumentVega = Optionsutil.calculateVega(spot, detail.strikePrice, (days / 365.0), interestRate, vol);
+				double instrumentDelta = Optionsutil.calculateDelta(spot, detail.strikePrice, (days / 365.0), interestRate, vol);
+				double instrumentGamma = Optionsutil.calculateGamma(spot, detail.strikePrice, (days / 365.0), interestRate, vol);
+				//internalLog("adding risk for " + option + ", pos=" + position + ", v=" + instrumentVega + ", g=" + instrumentGamma + ", d=" + instrumentDelta);
 				vega += position * instrumentVega;
 				gamma += position * instrumentGamma;
 				delta += position * instrumentDelta;
 				totalPosition += position;
 			}
-			internalLog("current risk is , pos=" + totalPosition + ", v=" + vega + ", g=" + gamma + ", d=" + delta);
 			return new PortfolioRisk(delta, gamma, vega);
 		}
 
 
 		public void onSignal(OrderRequestMessage msg) {
-			internalLog("Received new order request message");
 			OrderInfo[] orders = implementation.placeOrders();
 			
 			for (OrderInfo order : orders) {

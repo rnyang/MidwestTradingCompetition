@@ -44,7 +44,7 @@ public class OptionSignalProcessor implements ISignalProcessor {
 			signal = new OrderRequestMessage();
 		}
 		else if (msgType.equalsIgnoreCase("Penalty")) {
-			double underlyingPrice = (parts[1].isEmpty()) ? Double.NaN : Double.parseDouble(parts[1]);
+			double underlyingPrice = (parts.length < 2 || parts[1].isEmpty()) ? Double.MIN_VALUE : Double.parseDouble(parts[1]);
 			signal = new ProcessPenaltyRequest(underlyingPrice);
 		}
 		else {
