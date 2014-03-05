@@ -1,23 +1,27 @@
 package org.chicago.cases;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
 import org.chicago.cases.utils.InstrumentUtilities;
-import org.chicago.cases.utils.TeamUtilities;
 import org.chicago.cases.utils.InstrumentUtilities.Case;
+import org.chicago.cases.utils.TeamUtilities;
 
 import com.optionscity.freeway.api.AbstractJob;
 import com.optionscity.freeway.api.IContainer;
 import com.optionscity.freeway.api.IDB;
+import com.optionscity.freeway.api.IGrid;
 import com.optionscity.freeway.api.IJobSetup;
-import com.optionscity.freeway.api.OrderRequest;
 import com.optionscity.freeway.api.Prices;
 import com.optionscity.freeway.api.messages.MarketBidAskMessage;
 
 public abstract class AbstractMathCase extends AbstractJob {
 	
-	private static final long STAT_REFRESH = 1000;
+	private static final long STAT_REFRESH = 5000;
+	private static final String STAT_GRID = "MATH";
+	private static final String MARKET_GRID = "MATH_MARKET";
+	
 	
 	// ---------------- Define Case Interface and abstract method ----------------
 	/*
@@ -42,11 +46,28 @@ public abstract class AbstractMathCase extends AbstractJob {
 		
 	}
 	
+	class TradeInfo {
+		
+		final int position;
+		final double price;
+		
+		private TradeInfo(int position, double price) {
+			this.position = position;
+			this.price = price;
+		}
+		
+	}
+	
 	// ----------- Handle System Events and Translate to Case Interface Methods ---------------
 	
 	private IDB teamDB;
 	private MathCase implementation;
     private int position = 0;
+    private IGrid statsGrid;
+    private IGrid marketGrid;
+    private String teamCode;
+    private String underlying;
+    private List<TradeInfo> trades = new ArrayList<TradeInfo>();
 	
 	/*
 	 * Freeway has its own events that are likely too complex for the student's to work out in one month.
@@ -65,6 +86,29 @@ public abstract class AbstractMathCase extends AbstractJob {
 	public void install(IJobSetup setup) {
 		setup.addVariable("Team_Code", "Team Code and product to trade", "string", "");
 		getMathCaseImplementation().addVariables(setup);
+		setup.setVariable("timer", "" + STAT_REFRESH);
+	}
+	
+	private double calculatePNL() {
+		Prices prices = instruments().getAllPrices(underlying);
+		double settlement = (prices.ask + prices.bid) / 2;
+		double pnl = 0;
+		for (TradeInfo trade : trades) {
+			double cost = trade.position * trade.price;
+			double value = trade.position * settlement;
+			pnl += value - cost;
+		}
+		return pnl;
+	}
+
+	public void onTimer() {
+		statsGrid.set(teamCode, "position", position);
+		statsGrid.set(teamCode, "pnl", calculatePNL());
+		
+		Prices prices = instruments().getAllPrices(underlying);
+		marketGrid.set(underlying, "bid", prices.bid);
+		marketGrid.set(underlying, "offer", prices.ask);
+		
 	}
 
 	/*
@@ -74,21 +118,22 @@ public abstract class AbstractMathCase extends AbstractJob {
 	@Override
 	public void begin(IContainer container) {
 		super.begin(container);
-		String teamCode = getStringVar("Team_Code");
+		teamCode = getStringVar("Team_Code");
 		if (teamCode.isEmpty())
 			container.stopJob("Please set a Team_Code in the configuration");
 		if (!TeamUtilities.validateTeamCode(teamCode))
 			container.stopJob("The specified Team Code is not a valid code.  Please enter the code provided to your team.");
-		
+		statsGrid = container.addGrid(STAT_GRID, new String[] {"positions", "pnl"});
+		marketGrid = container.addGrid(MARKET_GRID, new String[] {"bid", "offer"});
 		log("Team Code is, " + teamCode);
 		
 		List<String> products = InstrumentUtilities.getSymbolsForTeamByCase(Case.MATH, teamCode);
 		for (String product : products) {
+			underlying = product + "-E";
 			instruments().startSymbol(product);
 			container.filterMarketMessages(product + ";;;;;;");
 			log("filtering for " + product);
 		}
-	
 		
 		container.subscribeToMarketBidAskMessages();
 		container.subscribeToTradeMessages();
@@ -103,13 +148,15 @@ public abstract class AbstractMathCase extends AbstractJob {
 	}
 
 	public void onMarketBidAsk(MarketBidAskMessage msg) {
-		log("Received TOB " + msg.instrumentId);
+
 		Prices prices = instruments().getAllPrices(msg.instrumentId);
 		int result = implementation.newBidAsk(prices.bid, prices.ask);
 
         /*--------------------------------Hanzhi Update----------------------------------------*/
-        int newposition = position + result;
-        if (newposition > 5 || newposition < -5){
+        int newPosition = position + result;
+        if (newPosition > 5 || newPosition < -5){
+        	log("You have exceeded the position limits.  Your order will not be filled");
+        	log("The requested amount would have put your position at " + newPosition);
             implementation.orderFilled(0,0);
             return;
         }
@@ -123,6 +170,7 @@ public abstract class AbstractMathCase extends AbstractJob {
 					 new Date(),
 					 null, null, null, null, null, null);
 			implementation.orderFilled(result, prices.ask);
+			trades.add(new TradeInfo(result, prices.ask));
 		}
 		else if (result < 0) {
 			long id = trades().manualTrade(msg.instrumentId,
@@ -132,11 +180,9 @@ public abstract class AbstractMathCase extends AbstractJob {
 					 new Date(),
 					 null, null, null, null, null, null);
 			implementation.orderFilled(result, prices.bid);
+			trades.add(new TradeInfo(result, prices.ask));
 		}
-
-		/*--------------------------------Hanzhi Update----------------------------------------*/
-        position = position + result;
-		/*--------------------------------Hanzhi Update----------------------------------------*/
+        position += result;
 	}
 
 	

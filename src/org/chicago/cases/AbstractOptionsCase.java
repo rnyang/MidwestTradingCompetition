@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.chicago.cases.AbstractMathCase.TradeInfo;
 import org.chicago.cases.options.OptionSignalProcessor;
 import org.chicago.cases.options.OptionSignals.ForecastMessage;
 import org.chicago.cases.options.OptionSignals.OrderRequestMessage;
@@ -24,29 +25,54 @@ import org.chicago.cases.utils.TeamUtilities;
 import com.optionscity.freeway.api.AbstractJob;
 import com.optionscity.freeway.api.IContainer;
 import com.optionscity.freeway.api.IDB;
+import com.optionscity.freeway.api.IGrid;
 import com.optionscity.freeway.api.IJobSetup;
 import com.optionscity.freeway.api.InstrumentDetails;
+import com.optionscity.freeway.api.InstrumentDetails.Type;
 import com.optionscity.freeway.api.Order;
 import com.optionscity.freeway.api.Prices;
 import com.optionscity.freeway.api.messages.MarketBidAskMessage;
 
 public abstract class AbstractOptionsCase extends AbstractJob {
 	
-		private static final long STAT_REFRESH = 1000;
+		private static final long STAT_REFRESH = 5000;
 		private static final double RATE = 0.01;
 		private static final int DAYS_PER_ROUND = 100;
+		private static final String STAT_GRID = "OPTION";
+		private static final String MARKET_GRID = "OPTION_MARKET";
 		
 		private RiskMessage currentLimits;
 		private double currentUnderlying = 0;
 		private String underlyingSymbol;
 		private int currentTime = 0;
-		private int daysToJuneExp = 100;
-		private int daysToMayExp = 130;
+		private int daysToJuneExp = 130;
+		private int daysToMayExp = 100;
 		private double currentVol = 0;
 		
 		private Random random = new Random();
 		private List<String> optionList = new ArrayList<String>();
 		private Map<String, Integer> positionMap = new ConcurrentHashMap<String, Integer>();
+		private List<TradeInfo> trades = new ArrayList<TradeInfo>();
+		private List<TradeInfo> penalties = new ArrayList<TradeInfo>();
+		private IGrid stats;
+		private IGrid market;
+		private String teamCode;
+		
+		class PositionInfo {
+			
+			private final int positions;
+			private final int optionsPosition;
+			private final int underlyingPosition;
+			private final double pnl;
+			
+			private PositionInfo(int positions, int underlyingPosition, int optionsPosition, double pnl) {
+				this.pnl = pnl;
+				this.positions = positions;
+				this.underlyingPosition = underlyingPosition;
+				this.optionsPosition = optionsPosition;
+			}
+			
+		}
 		
 		class PortfolioRisk {
 			
@@ -58,6 +84,20 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 				this.delta = delta;
 				this.gamma = gamma;
 				this.vega = vega;
+			}
+			
+		}
+		
+		class TradeInfo {
+			
+			final String idSymbol;
+			final int position;
+			final double price;
+			
+			private TradeInfo(String idSymbol, int position, double price) {
+				this.idSymbol = idSymbol;
+				this.position = position;
+				this.price = price;
 			}
 			
 		}
@@ -123,7 +163,34 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 		public void install(IJobSetup setup) {
 			setup.addVariable("Team_Code", "Team Code and product to trade", "string", "");
 			setup.addVariable("verbose", "verbose processing", "boolean", "false");
+			setup.setVariable("timer", "" + STAT_REFRESH);
 			getOptionCaseImplementation().addVariables(setup);
+		}
+
+
+		@Override
+		public void onTimer() {
+			PortfolioRisk risk = calculateRisk(currentUnderlying, RATE, currentVol);
+			PositionInfo positions = calculatePNL(trades);
+			stats.set(teamCode, "vega", risk.vega);
+			stats.set(teamCode, "gamma", risk.gamma);
+			stats.set(teamCode, "delta", risk.delta);
+			stats.set(teamCode, "pnl", positions.pnl);
+			stats.set(teamCode, "positions", positions.positions);
+			stats.set(teamCode, "underlying", positions.underlyingPosition);
+			stats.set(teamCode, "options", positions.optionsPosition);
+			
+			PositionInfo penaltyInfo = calculatePNL(penalties);
+			stats.set(teamCode, "penaltyValue", penaltyInfo.pnl);
+			
+			Prices prices = instruments().getAllPrices(underlyingSymbol);
+			market.set(underlyingSymbol, "bid", prices.bid);
+			market.set(underlyingSymbol, "offer", prices.ask);
+			for (String idSymbol : optionList) {
+				prices = instruments().getAllPrices(idSymbol);
+				market.set(idSymbol, "bid", prices.bid);
+				market.set(idSymbol, "offer", prices.ask);
+			}
 		}
 
 
@@ -135,7 +202,10 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 		public void begin(IContainer container) {
 			super.begin(container);
 			
-			String teamCode = getStringVar("Team_Code");
+			stats = container.addGrid(STAT_GRID, new String[] {"pnl", "penaltyValue", "positions", "underlying", "options", "vega", "gamma", "delta"});
+			market = container.addGrid(MARKET_GRID, new String[] {"bid", "offer"});
+			
+			teamCode = getStringVar("Team_Code");
 			verbose = getBooleanVar("verbose");
 			if (teamCode.isEmpty())
 				container.failJob("Please set a Team_Code in the configuration");
@@ -206,6 +276,10 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 				log("Volatility is currently not set.  Penalties will not be processed");
 				return;
 			}
+			if (currentLimits == null) {
+				log("No risk limits are set.  Penalties will not be processed");
+				return;
+			}
 			
 			internalLog("----------------------------------------");
 			
@@ -230,7 +304,6 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 			
 			
 			// Handle vega or gamma
-			
 			double vegaNeeded = 0;
 			double gammaNeeded = 0;
 			double tradeQuantity = 0;
@@ -268,9 +341,10 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 				long id = trades().manualTrade(option, roundedTradeQuantity, priceToLiquidate, side, new Date(), null, null, null, null, null, null);
 				
 				deltaOffset += roundedTradeQuantity * delta;
-				recordPosition(option, roundedTradeQuantity);
+				recordTrade(option, roundedTradeQuantity, priceToLiquidate);
 				internalLog("liquidated " + roundedTradeQuantity + " @ " + priceToLiquidate);
 				implementation.penaltyFill(option, priceToLiquidate, roundedTradeQuantity);
+				penalties.add(new TradeInfo(option, roundedTradeQuantity, priceToLiquidate));
 			}
 			else {
 				internalLog("No gamma or vega liquidation necessary");
@@ -293,14 +367,15 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 				Order.Side side = (deltaNeeded > 0) ? Order.Side.BUY : Order.Side.SELL;
 				long id = trades().manualTrade(underlyingSymbol, tradeQuantityRounded, priceToLiquidate, side, new Date(), null, null, null, null, null, null);
 				
-				recordPosition(underlyingSymbol, tradeQuantityRounded);
+				recordTrade(underlyingSymbol, tradeQuantityRounded, priceToLiquidate);
 				internalLog("liquidated " + tradeQuantityRounded + " @ " + priceToLiquidate);
 				implementation.penaltyFill(underlyingSymbol, priceToLiquidate, tradeQuantityRounded);
+				penalties.add(new TradeInfo(underlyingSymbol, tradeQuantityRounded, priceToLiquidate));
 			}
 			else {
 				internalLog("No delta liquidation necessary");
 			}
-			internalLog("penalty liquidation complete");
+			internalLog("Penalty liquidation complete");
 		}
 		
 		private String getFrontMonthATM() {
@@ -318,7 +393,6 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 						chosenOption = option;
 						closestPrice = distance;
 					}
-					
 				}
 			}
 			return chosenOption;
@@ -374,10 +448,18 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 			OrderInfo[] orders = implementation.placeOrders();
 			
 			for (OrderInfo order : orders) {
+				
+				if (order == null) {
+					log("Null order received, skipping...");
+					continue;
+				}
+				if (order.side == null || isInvalidInstrument(order.idSymbol)) {
+					log("Invalid order properties, skipping");
+				}
+				
 				// Get details
 				Order.Side side = (order.side == OrderSide.BUY) ? Order.Side.BUY : Order.Side.SELL;
-				String idSymbol = order.idSymbol;
-				Prices price = instruments().getAllPrices(idSymbol);
+				Prices price = instruments().getAllPrices(order.idSymbol);
 				double tradePrice = (order.side == OrderSide.BUY) ? price.ask : price.bid;
 				int tradeQuantity = (order.side == OrderSide.BUY) ? order.quantity : -order.quantity;
 				
@@ -386,18 +468,45 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 				implementation.orderFilled(order.idSymbol, tradePrice, tradeQuantity);
 				
 				// Update position
-				recordPosition(order.idSymbol, tradeQuantity);
+				recordTrade(order.idSymbol, tradeQuantity, tradePrice);
 			}
 		}
+		
+		private boolean isInvalidInstrument(String idSymbol) {
+			if (idSymbol != null && (idSymbol.equals(underlyingSymbol) || optionList.contains(idSymbol)))
+				return true;
+			return false;		
+		}
+		
+		private PositionInfo calculatePNL(List<TradeInfo> tradeSource) {
+			int positions = 0;
+			int options = 0;
+			int underlying = 0;
+			double pnl = 0;
+			for (TradeInfo trade : tradeSource) {
+				InstrumentDetails details = instruments().getInstrumentDetails(trade.idSymbol);
+				Prices prices = instruments().getAllPrices(trade.idSymbol);
+				double settlement = (prices.ask + prices.bid) / 2;
+				double cost = trade.position * trade.price;
+				double value = trade.position * settlement;
+				pnl += value - cost;
+				positions += trade.position;
+				if (details.type == Type.EQUITY)
+					underlying += trade.position;
+				else
+					options += trade.position;
+			}
+			return new PositionInfo(positions, underlying, options, pnl);
+		}
 
-
-		private void recordPosition(String idSymbol, int tradeQuantity) {
+		private void recordTrade(String idSymbol, int tradeQuantity, double tradePrice) {
 			int currentPosition = 0;
 			if (positionMap.containsKey(idSymbol)) {
 				currentPosition = positionMap.get(idSymbol);
 			}
 			currentPosition += tradeQuantity;
 			positionMap.put(idSymbol, currentPosition);
+			trades.add(new TradeInfo(idSymbol, tradeQuantity, tradePrice));
 		}
 		
 		private void internalLog(String message) {

@@ -20,16 +20,22 @@ import org.chicago.cases.utils.TeamUtilities;
 import com.optionscity.freeway.api.AbstractJob;
 import com.optionscity.freeway.api.IContainer;
 import com.optionscity.freeway.api.IDB;
+import com.optionscity.freeway.api.IGrid;
 import com.optionscity.freeway.api.IJobSetup;
+import com.optionscity.freeway.api.Prices;
 
 public abstract class AbstractExchangeArbCase extends AbstractJob {
 	
-	private static final long STAT_REFRESH = 1000;
+	private static final long STAT_REFRESH = 5000;
 	private static final int DEFAULT_QUANTITY = 1;
 	private static final int TOB_DELAY = 5;
 	private static final int FILL_DELAY = 5;
 	private static final int MAX_SHORT = -200;
 	private static final int MAX_LONG = 200;
+	
+	private static final String STAT_GRID = "ARB";
+	private static final String MARKET_GRID = "ARB_MARKET";
+	private static final String QUOTE_GRID = "ARB_QUOTES";
 	
 	// ---------------- Define Case Interface and abstract method ----------------
 		/*
@@ -68,6 +74,18 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 			
 		}
 		
+		class TradeInfo {
+			
+			final int position;
+			final double price;
+			
+			private TradeInfo(int position, double price) {
+				this.position = position;
+				this.price = price;
+			}
+			
+		}
+		
 		// ------------------ Begin Impl -----------------------------
 
 		
@@ -81,18 +99,63 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 		private Quote[] currentMarketQuotes = new Quote[0];
 		private boolean verbose = false;
 		private int positionCount = 0;
+		private List<TradeInfo> trades = new ArrayList<TradeInfo>();
+		private List<TradeInfo> penalties = new ArrayList<TradeInfo>();
+		private IGrid statGrid;
+		private IGrid marketGrid;
+		private IGrid quoteGrid;
+		private int snowFills = 0;
+		private int robotFills = 0;
+		private String teamCode;
 		
 		public void install(IJobSetup setup) {
 			setup.addVariable("Team_Code", "Team Code and product to trade", "string", "");
 			setup.addVariable("verbose", "verbose processing", "boolean", "false");
+			setup.setVariable("timer", "" + STAT_REFRESH);
 			getArbCaseImplementation().addVariables(setup);
+		}
+
+
+		@Override
+		public void onTimer() {
+			double pnl = calculatePNL(trades);
+			double penaltyValue = calculatePNL(penalties);
+			statGrid.set(teamCode, "pnl", pnl);
+			statGrid.set(teamCode, "positions", positionCount);
+			statGrid.set(teamCode, "penaltyValue", penaltyValue);
+			statGrid.set(teamCode, "snowFills", snowFills);
+			statGrid.set(teamCode, "robotFills", robotFills);
+			snowFills = 0;
+			robotFills = 0;
+			
+			for (Quote quote : currentMarketQuotes) {
+				marketGrid.set(quote.exchange.name(), "bid", quote.bidPrice);
+				marketGrid.set(quote.exchange.name(), "offer", quote.askPrice);
+			}
+			
+			for (Quote quote : myQuotes) {
+				if (quote.exchange == Exchange.SNOW) {
+					quoteGrid.set(teamCode, "snowBid", quote.bidPrice);
+					quoteGrid.set(teamCode, "snowOffer", quote.askPrice);
+				}
+				else {
+					quoteGrid.set(teamCode, "robotBid", quote.bidPrice);
+					quoteGrid.set(teamCode, "robotOffer", quote.askPrice);
+				}
+			}
+			
 		}
 
 
 		public void begin(IContainer container) {
 			super.begin(container);
+			
+			statGrid = container.addGrid(STAT_GRID, new String[] {"pnl", "positions", "penaltyValue", "snowFills", "robotFills"});
+			marketGrid = container.addGrid(MARKET_GRID, new String[] {"bid", "offer"});
+			quoteGrid = container.addGrid(QUOTE_GRID, new String[] {"snowBid", "snowOffer", "robotBid", "robotOffer"}); 
+			
 			verbose = getBooleanVar("verbose");
-			String teamCode = getStringVar("Team_Code");
+			teamCode = getStringVar("Team_Code");
 			if (teamCode.isEmpty())
 				container.stopJob("Please set a Team_Code in the configuration");
 			if (!TeamUtilities.validateTeamCode(teamCode))
@@ -138,7 +201,11 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 			processCurrentTick();
 			
 			if ((currentTick > 0) && ((currentTick % 5) == 0)) {
-				myQuotes = implementation.refreshQuotes();
+				Quote[] newQuotes = implementation.refreshQuotes();
+				if (validQuotes(newQuotes))
+					myQuotes = newQuotes;
+				else
+					log("Returned quotes are invalid.  They will not go to market");
 				internalLog("Set my quotes to " + quotesToString(quotes));
 			}
 			
@@ -154,19 +221,38 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 			currentTick += 1;
 		}
 
+		private boolean validQuotes(Quote[] quotes) {
+			if (quotes == null || quotes.length != 2 || (quotes[0].exchange == quotes[1].exchange))
+				return false;
+			return true;
+		}
+
+
+		private double calculatePNL(List<TradeInfo> tradeSource) {
+			Prices prices = instruments().getAllPrices(myInstrument);
+			double settlement = (prices.ask + prices.bid) / 2;
+			double pnl = 0;
+			for (TradeInfo trade : tradeSource) {
+				double cost = trade.position * trade.price;
+				double value = trade.position * settlement;
+				pnl += value - cost;
+			}
+			return pnl;
+		}
 
 		// Likely always liquidating quantity of 1
 		private void processPositions() {
 			internalLog("current position is " + positionCount);
 			if (positionCount > MAX_LONG) {
-				
 				int quantity = positionCount - MAX_LONG;
 				double bestBid = Math.max(currentMarketQuotes[0].bidPrice, currentMarketQuotes[1].bidPrice);
 				double penaltyPrice = bestBid * 0.8;
 				positionCount -= quantity;
 				long id = trades().manualTrade(myInstrument, quantity, penaltyPrice, com.optionscity.freeway.api.Order.Side.SELL, new Date(), null, null, null, null, null, null);
-				implementation.positionPenalty(quantity, penaltyPrice);
-				internalLog("liquidated " + quantity + " @ " + penaltyPrice + " based on best bid of " + bestBid);
+				implementation.positionPenalty(-quantity, penaltyPrice);
+				trades.add(new TradeInfo(-quantity, penaltyPrice));
+				penalties.add(new TradeInfo(-quantity, penaltyPrice));
+				internalLog("liquidated " + -quantity + " @ " + penaltyPrice + " based on best bid of " + bestBid);
 			}
 			else if (positionCount < MAX_SHORT) {
 				int quantity = Math.abs(positionCount + MAX_LONG);
@@ -174,8 +260,10 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 				double penaltyPrice = bestAsk * 1.2;
 				positionCount += quantity;
 				long id = trades().manualTrade(myInstrument, quantity, penaltyPrice, com.optionscity.freeway.api.Order.Side.BUY, new Date(), null, null, null, null, null, null);
-				implementation.positionPenalty(-quantity, penaltyPrice);
-				internalLog("liquidated " + -quantity + " @ " + penaltyPrice + " based on best ask of " + bestAsk);
+				implementation.positionPenalty(quantity, penaltyPrice);
+				trades.add(new TradeInfo(quantity, penaltyPrice));
+				penalties.add(new TradeInfo(-quantity, penaltyPrice));
+				internalLog("liquidated " + quantity + " @ " + penaltyPrice + " based on best ask of " + bestAsk);
 			}
 		}
 
@@ -252,27 +340,38 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 						internalLog("Matching bidPrice of " + price + " against askPrice of " + quote.askPrice);
 						if (price >= quote.askPrice) {
 							internalLog("Successful match");
-							positionCount -= 1;
+							positionCount -= DEFAULT_QUANTITY;
 							long id = trades().manualTrade(myInstrument,
 									 DEFAULT_QUANTITY,
 									 quote.askPrice,
 									 com.optionscity.freeway.api.Order.Side.SELL,
 									 new Date(),
 									 null, null, null, null, null, null);
+							trades.add(new TradeInfo(-DEFAULT_QUANTITY, quote.askPrice));
+							if (exchange == Exchange.ROBOT)
+								robotFills += 1;
+							else
+								snowFills += 1;
 							return new DelayedOrderFill(currentTick + FILL_DELAY, AlgoSide.ALGOSELL, quote.askPrice, exchange);
+							
 						}
 					}
 					else {
 						internalLog("Matching bidPrice of " + price + " against askPrice of " + quote.askPrice);
 						if (price <= quote.bidPrice) {
 							internalLog("Successful match");
-							positionCount += 1;
+							positionCount += DEFAULT_QUANTITY;
 							long id = trades().manualTrade(myInstrument,
 									 DEFAULT_QUANTITY,
 									 quote.bidPrice,
 									 com.optionscity.freeway.api.Order.Side.BUY,
 									 new Date(),
 									 null, null, null, null, null, null);
+							trades.add(new TradeInfo(DEFAULT_QUANTITY, quote.askPrice));
+							if (exchange == Exchange.ROBOT)
+								robotFills += 1;
+							else
+								snowFills += 1;
 							return new DelayedOrderFill(currentTick + FILL_DELAY, AlgoSide.ALGOBUY, quote.bidPrice, exchange);
 						}
 					}
