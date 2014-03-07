@@ -171,6 +171,11 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 
 		@Override
 		public void onTimer() {
+			if (currentVol == 0 || currentLimits == null) {
+				log("Not enough data to calculate stats yet...");
+				return;
+			}
+			
 			PortfolioRisk risk = calculateRisk(currentUnderlying, RATE, currentVol);
 			PositionInfo positions = calculatePNL(trades);
 			stats.set(teamCode, "vega", risk.vega);
@@ -462,13 +467,17 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 			OrderInfo[] orders = implementation.placeOrders();
 			
 			for (OrderInfo order : orders) {
-				
 				if (order == null) {
 					log("Null order received, skipping...");
 					continue;
 				}
-				if (order.side == null || isInvalidInstrument(order.idSymbol)) {
+				else if (order.side == null || !isValidInstrument(order.idSymbol)) {
 					log("Invalid order properties, skipping");
+					continue;
+				}
+				else if (order.quantity < 0) {
+					log("You must enter a positive order quantity.  Skipping order");
+					continue;
 				}
 				
 				// Get details
@@ -477,16 +486,20 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 				double tradePrice = (order.side == OrderSide.BUY) ? price.ask : price.bid;
 				int tradeQuantity = (order.side == OrderSide.BUY) ? order.quantity : -order.quantity;
 				
-				// Make Trade
-				long id = trades().manualTrade(order.idSymbol, order.quantity, tradePrice, side, new Date(), null, null, null, null, null, null);
-				implementation.orderFilled(order.idSymbol, tradePrice, tradeQuantity);
+				if ((side == Order.Side.BUY && order.price >= price.ask) || (side == Order.Side.SELL && order.price <= price.bid)) {
+					// Make Trade
+					long id = trades().manualTrade(order.idSymbol, order.quantity, tradePrice, side, new Date(), null, null, null, null, null, null);
+					implementation.orderFilled(order.idSymbol, tradePrice, tradeQuantity);
+					recordTrade(order.idSymbol, tradeQuantity, tradePrice);
+				}
+				else {
+					log("Order side=" + side.name() + ", with price=" + order.price + ", did not cross opposite market of " + tradePrice);
+				}	
 				
-				// Update position
-				recordTrade(order.idSymbol, tradeQuantity, tradePrice);
 			}
 		}
 		
-		private boolean isInvalidInstrument(String idSymbol) {
+		private boolean isValidInstrument(String idSymbol) {
 			if (idSymbol != null && (idSymbol.equals(underlyingSymbol) || optionList.contains(idSymbol)))
 				return true;
 			return false;		

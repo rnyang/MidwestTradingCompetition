@@ -54,7 +54,7 @@ public class ExampleOptionCaseImplementation extends AbstractOptionsCase impleme
 	}
 	
 	public void newVolUpdate(VolUpdate msg) {
-		//log("I received a vol update message!");
+		
 	}
 	
 	public void penaltyFill(String idSymbol, double price, int quantity) {
@@ -64,10 +64,15 @@ public class ExampleOptionCaseImplementation extends AbstractOptionsCase impleme
 	public OrderInfo[] placeOrders() {
 		// Place a buy order of 100.00 with qty of 10 for every symbol we know of
 		// Note: Just a 'dummy' implementation.
-		OrderInfo[] orders = new OrderInfo[1];
-		String symbol = knownSymbols.get(1);
-		orders[0] = new OrderInfo(symbol, OrderSide.BUY, -1000, 10);
-		
+		OrderInfo[] orders = new OrderInfo[] {};
+		if (knownSymbols.isEmpty()) {
+			log("I don't know of any symbols yet.  Returning empty array.");
+		}
+		else {
+			orders = new OrderInfo[1];
+			String symbol = knownSymbols.get(1);
+			orders[0] = new OrderInfo(symbol, OrderSide.BUY, 1000, 2);
+		}
 		return orders;
 	}
 

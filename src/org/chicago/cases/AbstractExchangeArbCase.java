@@ -100,6 +100,8 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 		private Quote[] currentMarketQuotes = new Quote[0];
 		private boolean verbose = false;
 		private int positionCount = 0;
+		private int liquidationAmount = 0;
+		private int liquidations = 0;
 		private List<TradeInfo> trades = new ArrayList<TradeInfo>();
 		private List<TradeInfo> penalties = new ArrayList<TradeInfo>();
 		private IGrid statGrid;
@@ -123,7 +125,9 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 			double penaltyValue = calculatePNL(penalties);
 			statGrid.set(teamCode, "pnl", pnl);
 			statGrid.set(teamCode, "positions", positionCount);
-			statGrid.set(teamCode, "penaltyValue", penaltyValue);
+			statGrid.set(teamCode, "liquidations", liquidations);
+			statGrid.set(teamCode, "liquidatedAmount", liquidationAmount);
+			statGrid.set(teamCode, "penaltyPnL", penaltyValue);
 			statGrid.set(teamCode, "snowFills", snowFills);
 			statGrid.set(teamCode, "robotFills", robotFills);
 			snowFills = 0;
@@ -151,7 +155,7 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 		public void begin(IContainer container) {
 			super.begin(container);
 			
-			statGrid = container.addGrid(STAT_GRID, new String[] {"pnl", "positions", "penaltyValue", "snowFills", "robotFills"});
+			statGrid = container.addGrid(STAT_GRID, new String[] {"pnl", "positions", "liquidations","liquidatedAmount", "penaltyPnL", "snowFills", "robotFills"});
 			marketGrid = container.addGrid(MARKET_GRID, new String[] {"bid", "offer"});
 			quoteGrid = container.addGrid(QUOTE_GRID, new String[] {"snowBid", "snowOffer", "robotBid", "robotOffer"}); 
 			
@@ -193,7 +197,6 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 		
 		public void onSignal(TopOfBookUpdate signal) {
 			internalLog("New TOB - Current tick is " + currentTick);
-			
 			
 			// Add message to manager
 			Quote[] quotes = new Quote[2];
@@ -247,6 +250,7 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 		}
 
 		// Likely always liquidating quantity of 1
+		// Refactor
 		private void processPositions() {
 			internalLog("current position is " + positionCount);
 			if (positionCount > MAX_LONG) {
@@ -259,6 +263,8 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 				trades.add(new TradeInfo(-quantity, penaltyPrice));
 				penalties.add(new TradeInfo(-quantity, penaltyPrice));
 				internalLog("liquidated " + -quantity + " @ " + penaltyPrice + " based on best bid of " + bestBid);
+				liquidations += 1;
+				liquidationAmount -= quantity;
 			}
 			else if (positionCount < MAX_SHORT) {
 				int quantity = Math.abs(positionCount + MAX_LONG);
@@ -270,6 +276,8 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 				trades.add(new TradeInfo(quantity, penaltyPrice));
 				penalties.add(new TradeInfo(-quantity, penaltyPrice));
 				internalLog("liquidated " + quantity + " @ " + penaltyPrice + " based on best ask of " + bestAsk);
+				liquidations += 1;
+				liquidationAmount += quantity;
 			}
 		}
 
