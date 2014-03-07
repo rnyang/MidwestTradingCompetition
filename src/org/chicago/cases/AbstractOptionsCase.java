@@ -75,11 +75,11 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 			
 		}
 		
-		class PortfolioRisk {
+		public static class PortfolioRisk {
 			
-			private final double delta;
-			private final double gamma;
-			private final double vega;
+			public final double delta;
+			public final double gamma;
+			public final double vega;
 			
 			private PortfolioRisk(double delta, double gamma, double vega) {
 				this.delta = delta;
@@ -427,7 +427,11 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 			}
 		}
 		
-		private PortfolioRisk calculateRisk(double spot, double interestRate, double vol) {
+		protected PortfolioRisk calculateRisk() {
+			return calculateRisk(currentUnderlying, RATE, currentVol);
+		}
+		
+		public PortfolioRisk calculateRisk(double spot, double interestRate, double vol) {
 			Calendar cal = Calendar.getInstance();
 			
 			double delta = 0;
@@ -438,12 +442,13 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 			// Set delta to current underlying position count
 			int underlyingPosition = positionMap.get(underlyingSymbol);
 			delta += underlyingPosition;
-			//internalLog("underlying, pos=" + underlyingPosition + ", delta=" + delta);
+			internalLog("underlying, pos=" + underlyingPosition + ", delta=" + delta);
 			
 			// Aggregate greeks for each options
 			for (String option : optionList) {
 				// Get instrument details
 				int position = positionMap.get(option);
+				internalLog("positionMap - " + option + " - " + position);
 				InstrumentDetails detail = instruments().getInstrumentDetails(option);
 				cal.setTime(detail.expiration);
 				int monthCode = cal.get(Calendar.MONTH);
@@ -453,7 +458,7 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 				double instrumentVega = Optionsutil.calculateVega(spot, detail.strikePrice, (days / 365.0), interestRate, vol);
 				double instrumentDelta = Optionsutil.calculateDelta(spot, detail.strikePrice, (days / 365.0), interestRate, vol);
 				double instrumentGamma = Optionsutil.calculateGamma(spot, detail.strikePrice, (days / 365.0), interestRate, vol);
-				//internalLog("adding risk for " + option + ", pos=" + position + ", v=" + instrumentVega + ", g=" + instrumentGamma + ", d=" + instrumentDelta);
+				internalLog("adding risk for " + option + ", pos=" + position + ", v=" + instrumentVega + ", g=" + instrumentGamma + ", d=" + instrumentDelta);
 				vega += position * instrumentVega;
 				gamma += position * instrumentGamma;
 				delta += position * instrumentDelta;
@@ -475,8 +480,8 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 					log("Invalid order properties, skipping");
 					continue;
 				}
-				else if (order.quantity < 0) {
-					log("You must enter a positive order quantity.  Skipping order");
+				else if (order.quantity <= 0 || order.price <= 0) {
+					log("You must enter a positive quantity or price.  Skipping order");
 					continue;
 				}
 				
