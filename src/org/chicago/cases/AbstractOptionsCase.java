@@ -309,18 +309,17 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 			
 			Prices optionPrices = instruments().getAllPrices(option);
 			InstrumentDetails details = instruments().getInstrumentDetails(option);
-			double vega = Optionsutil.calculateVega(underlyingPrice, details.strikePrice, daysToMayExp, RATE, currentVol);
-			double gamma = Optionsutil.calculateGamma(underlyingPrice, details.strikePrice, daysToMayExp, RATE, currentVol);
-			double delta = Optionsutil.calculateDelta(underlyingPrice, details.strikePrice, daysToMayExp, RATE, currentVol);
 			
+			double vega = Optionsutil.calculateVega(underlyingPrice, details.strikePrice, (daysToMayExp / 365.0), RATE, currentVol);
+			double gamma = Optionsutil.calculateDelta(underlyingPrice, details.strikePrice, (daysToMayExp / 365.0), RATE, currentVol);
+			double delta = Optionsutil.calculateGamma(underlyingPrice, details.strikePrice, (daysToMayExp / 365.0), RATE, currentVol);
 			
 			// Handle vega or gamma
 			double vegaNeeded = 0;
 			double gammaNeeded = 0;
 			double tradeQuantity = 0;
 			double deltaOffset = 0;
-			internalLog("running penalty liquidation logic");
-			internalLog("current limits are, mng=" + currentLimits.minGamma + ", mxg=" + currentLimits.minGamma + ", mnv=" + currentLimits.minVega + ", mxv=" + currentLimits.maxVega + ", mnd=" + currentLimits.minDelta + ", mxd=" + currentLimits.maxDelta);
+			internalLog("current limits are, mng=" + currentLimits.minGamma + ", mxg=" + currentLimits.maxGamma + ", mnv=" + currentLimits.minVega + ", mxv=" + currentLimits.maxVega + ", mnd=" + currentLimits.minDelta + ", mxd=" + currentLimits.maxDelta);
 			internalLog("portfolio risk is, gamma=" + risk.gamma + ", vega=" + risk.vega + ", delta=" + risk.delta);
 			if (risk.gamma > currentLimits.maxGamma || risk.gamma < currentLimits.minGamma) {
 				gammaNeeded = (risk.gamma > currentLimits.maxGamma) ? currentLimits.maxGamma - risk.gamma : currentLimits.minGamma - risk.gamma;
@@ -332,6 +331,10 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 			if (gammaNeeded != 0 || vegaNeeded != 0) {
 				// hedge required, choose a weapon
 				
+				internalLog("using " + option + " to reduce risk");
+				internalLog("instrument details, ask= " + optionPrices.ask + ", bid=" + optionPrices.bid + ", v=" + vega + ", g=" + gamma + ", d=" + delta);
+				
+				
 				boolean useGamma = Math.abs(gammaNeeded) > Math.abs(vegaNeeded);
 				if (useGamma) {
 					tradeQuantity = gammaNeeded / gamma;
@@ -342,8 +345,6 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 					internalLog("using vega to hedge, needed=" + vegaNeeded + ", vega=" + vega + " qty=" + tradeQuantity);
 				}
 				
-				internalLog("using " + option + " to reduce risk");
-				internalLog("instrument details, ask= " + optionPrices.ask + ", bid=" + optionPrices.bid + ", v=" + vega + ", g=" + gamma + ", d=" + delta);
 				
 				// Make trade
 				double priceToLiquidate = (tradeQuantity > 0) ? optionPrices.ask * 1.10 : optionPrices.bid * 0.90;

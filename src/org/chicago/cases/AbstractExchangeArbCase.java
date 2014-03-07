@@ -204,7 +204,7 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 			quotes[1] = signal.snowQuote;
 			currentMarketQuotes = quotes;
 			latencyManager.addQueueEvent(new DelayedTopOfBook(currentTick + TOB_DELAY, quotes));
-			internalLog("Scheduled " + quotesToString(quotes) + " for tick " + currentTick + TOB_DELAY);
+			internalLog("Scheduled " + quotesToString(quotes) + " for tick " + (currentTick + TOB_DELAY));
 			
 			// Process delayed messages before potentially asking for new quotes
 			processCurrentTick();
@@ -215,7 +215,7 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 					myQuotes = newQuotes;
 				else
 					log("Returned quotes are invalid.  They will not go to market");
-				internalLog("Set my quotes to " + quotesToString(quotes));
+				internalLog("Set my quotes to " + quotesToString(newQuotes));
 			}
 			
 			// Process new TOB against new quotes
@@ -351,7 +351,7 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 			for (Quote quote : myQuotes) {
 				if (exchange == quote.exchange) {
 					if (side == CustomerSide.CUSTOMERBUY) {
-						internalLog("Matching bidPrice of " + price + " against askPrice of " + quote.askPrice);
+						internalLog("Matching bidPrice of " + price + " against askPrice of " + quote.askPrice + " for exchange " + exchange);
 						if (price >= quote.askPrice) {
 							internalLog("Successful match");
 							positionCount -= DEFAULT_QUANTITY;
@@ -371,7 +371,7 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 						}
 					}
 					else {
-						internalLog("Matching bidPrice of " + price + " against askPrice of " + quote.askPrice);
+						internalLog("Matching askPrice of " + price + " against bidPrice of " + quote.bidPrice);
 						if (price <= quote.bidPrice) {
 							internalLog("Successful match");
 							positionCount += DEFAULT_QUANTITY;

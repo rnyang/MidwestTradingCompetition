@@ -16,6 +16,9 @@ public class ExampleArbCaseImplementation extends AbstractExchangeArbCase {
 		int position;
 		double[] desiredRobotPrices = new double[2];
 		double[] desiredSnowPrices = new double[2];
+		
+		double[] lastSnow = new double[2];
+		double[] lastRobot = new double[2];
 
 		public void addVariables(IJobSetup setup) {
 			// Registers a variable with the system.
@@ -32,16 +35,20 @@ public class ExampleArbCaseImplementation extends AbstractExchangeArbCase {
 
 		@Override
 		public void fillNotice(Exchange exchange, double price, AlgoSide algoside) {
-			//log("My quote was filled with at a price of " + price + " on " + exchange + " as a " + algoside);
+			log("My quote was filled with at a price of " + price + " on " + exchange + " as a " + algoside);
 			if(algoside == AlgoSide.ALGOBUY){
 				position += 1;
 			}else{
 				position -= 1;
 			}
+			log("Current position: " + position);
+			container.stopJob("Check Logs");
 		}
 
 		@Override
 		public void positionPenalty(int clearedQuantity, double price) {
+			log("Pre-penalty position: " + position + "Last SNOW market: " + fmtMkt(lastSnow)
+				+	" Last ROBOT market: " + fmtMkt(lastRobot));		                                                                                  
 			log("I received a position penalty with " + clearedQuantity + " positions cleared at " + price);
 			position -= clearedQuantity;
 		}
@@ -49,17 +56,23 @@ public class ExampleArbCaseImplementation extends AbstractExchangeArbCase {
 		@Override
 		public void newTopOfBook(Quote[] quotes) {
 			for (Quote quote : quotes) {
-				log("I received a new bid of " + quote.bidPrice + ", and ask of " + quote.askPrice + " from " + quote.exchange);
+				log("Algo received a new bid of " + quote.bidPrice + ", and ask of " + quote.askPrice + " from " + quote.exchange);
 			}
-
+			
+			lastSnow[0]=quotes[0].bidPrice;
+			lastSnow[1]=quotes[0].askPrice;
+			
+			lastRobot[0] = quotes[1].bidPrice;
+			lastRobot[1] = quotes[1].askPrice;
+			
 			desiredRobotPrices = new double[2];
 			desiredSnowPrices = new double[2];
 			
-			desiredRobotPrices[0] = quotes[0].bidPrice + 0.2;
-			desiredRobotPrices[1] = quotes[0].askPrice - 0.2;
+			desiredRobotPrices[0] = quotes[0].bidPrice + 0.5;
+			desiredRobotPrices[1] = quotes[0].askPrice + 20;
 
-			desiredSnowPrices[0] = quotes[1].bidPrice + 0.2;
-			desiredSnowPrices[1] = quotes[1].askPrice - 0.2;
+			desiredSnowPrices[0] = quotes[1].bidPrice + 0.5;
+			desiredSnowPrices[1] = quotes[1].askPrice + 20;
 		}
 
 		@Override
@@ -67,11 +80,17 @@ public class ExampleArbCaseImplementation extends AbstractExchangeArbCase {
 			Quote[] quotes = new Quote[2];
 			quotes[0] = new Quote(Exchange.ROBOT, desiredRobotPrices[0], desiredRobotPrices[1]);
 			quotes[1] = new Quote(Exchange.SNOW, desiredSnowPrices[0], desiredSnowPrices[1]);
+			log("My SNOW mkt: " + fmtMkt(desiredSnowPrices) + " My ROBOT mkt: " + fmtMkt(desiredRobotPrices));
 			return quotes;
 		}
 
 	}
 
+	
+	private String fmtMkt(double[] mkt){
+		return mkt[0] + "/" + mkt[1];
+	}
+	
 	@Override
 	public ArbCase getArbCaseImplementation() {
 		return new MySampleArbImplementation();

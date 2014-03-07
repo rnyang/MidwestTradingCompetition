@@ -177,6 +177,7 @@ public abstract class AbstractMathCase extends AbstractJob {
 					 null, null, null, null, null, null);
 			implementation.orderFilled(result, prices.ask);
 			trades.add(new TradeInfo(result, prices.ask));
+			position += result;
 		}
 		else if (result < 0) {
 			long id = trades().manualTrade(msg.instrumentId,
@@ -186,9 +187,10 @@ public abstract class AbstractMathCase extends AbstractJob {
 					 new Date(),
 					 null, null, null, null, null, null);
 			implementation.orderFilled(result, prices.bid);
-			trades.add(new TradeInfo(result, prices.ask));
+			trades.add(new TradeInfo(result, prices.bid));
+			position += result;
 		}
-        position += result;
+        
 	}
 
 	
