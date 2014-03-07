@@ -18,7 +18,7 @@ import com.optionscity.freeway.api.messages.MarketBidAskMessage;
 
 public abstract class AbstractMathCase extends AbstractJob {
 	
-	private static final long STAT_REFRESH = 5000;
+	private static final long STAT_REFRESH = 500;
 	private static final String STAT_GRID = "MATH";
 	private static final String MARKET_GRID = "MATH_MARKET";
 	
@@ -123,7 +123,7 @@ public abstract class AbstractMathCase extends AbstractJob {
 			container.stopJob("Please set a Team_Code in the configuration");
 		if (!TeamUtilities.validateTeamCode(teamCode))
 			container.stopJob("The specified Team Code is not a valid code.  Please enter the code provided to your team.");
-		statsGrid = container.addGrid(STAT_GRID, new String[] {"positions", "pnl"});
+		statsGrid = container.addGrid(STAT_GRID, new String[] {"position", "pnl"});
 		marketGrid = container.addGrid(MARKET_GRID, new String[] {"bid", "offer"});
 		log("Team Code is, " + teamCode);
 		
