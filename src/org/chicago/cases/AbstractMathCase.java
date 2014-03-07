@@ -90,7 +90,7 @@ public abstract class AbstractMathCase extends AbstractJob {
 		setup.setVariable("timer", "" + STAT_REFRESH);
 	}
 	
-	private double calculatePNL() {
+	protected double calculatePNL() {
 		Prices prices = instruments().getAllPrices(underlying);
 		double settlement = (prices.ask + prices.bid) / 2;
 		double pnl = 0;

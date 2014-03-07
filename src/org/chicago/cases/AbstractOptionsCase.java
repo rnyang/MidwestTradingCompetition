@@ -45,8 +45,8 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 		private double currentUnderlying = 0;
 		private String underlyingSymbol;
 		private int currentTime = 0;
-		private int daysToJuneExp = 130;
-		private int daysToMayExp = 100;
+		protected int daysToJuneExp = 130;
+		protected int daysToMayExp = 100;
 		private double currentVol = 0;
 		
 		private Random random = new Random();
@@ -59,7 +59,7 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 		private String teamCode;
 		private double liquidationFees = 0;
 		
-		class PositionInfo {
+		public static class PositionInfo {
 			
 			private final int positions;
 			private final int optionsPosition;
@@ -398,7 +398,7 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 			internalLog("Penalty liquidation complete");
 		}
 		
-		private String getFrontMonthATM() {
+		protected String getFrontMonthATM() {
 			Calendar cal = Calendar.getInstance();
 			double closestPrice = Double.MIN_VALUE;
 			String chosenOption = null;
@@ -511,7 +511,11 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 			return false;		
 		}
 		
-		private PositionInfo calculatePNL(List<TradeInfo> tradeSource) {
+		protected PositionInfo calculatePNL() {
+			return calculatePNL(trades);
+		}
+		
+		protected PositionInfo calculatePNL(List<TradeInfo> tradeSource) {
 			int positions = 0;
 			int options = 0;
 			int underlying = 0;

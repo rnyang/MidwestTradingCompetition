@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import org.chicago.cases.AbstractOptionsCase.PositionInfo;
 import org.chicago.cases.CommonSignals.EndSignal;
 import org.chicago.cases.arb.ArbSignalProcessor;
 import org.chicago.cases.arb.ArbSignals.CustomerOrder;
@@ -99,7 +100,7 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 		private Quote[] myQuotes = new Quote[0];
 		private Quote[] currentMarketQuotes = new Quote[0];
 		private boolean verbose = false;
-		private int positionCount = 0;
+		protected int positionCount = 0;
 		private int liquidationAmount = 0;
 		private int liquidations = 0;
 		private List<TradeInfo> trades = new ArrayList<TradeInfo>();
@@ -236,6 +237,9 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 			return true;
 		}
 
+		protected double calculatePNL() {
+			return calculatePNL(trades);
+		}
 
 		private double calculatePNL(List<TradeInfo> tradeSource) {
 			Prices prices = instruments().getAllPrices(myInstrument);
