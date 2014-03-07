@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import org.chicago.cases.CommonSignals.EndSignal;
 import org.chicago.cases.utils.InstrumentUtilities;
 import org.chicago.cases.utils.InstrumentUtilities.Case;
 import org.chicago.cases.utils.TeamUtilities;
@@ -139,12 +140,17 @@ public abstract class AbstractMathCase extends AbstractJob {
 		container.subscribeToTradeMessages();
 		container.subscribeToSignals();
 		container.filterOnlyMyTrades(true);
+		container.getPlaybackService().register(new CommonSignalProcessor());
 		
 		implementation = getMathCaseImplementation();
 		log("MathCase implementation detected to be " + implementation.getClass().getSimpleName());
 		
 		teamDB = container.getDB(teamCode);
 		implementation.initializeAlgo(teamDB);
+	}
+	
+	public void onSignal(EndSignal msg) {
+		log("END signal received");
 	}
 
 	public void onMarketBidAsk(MarketBidAskMessage msg) {

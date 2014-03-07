@@ -5,6 +5,7 @@ import java.util.List;
 
 public class InstrumentUtilities {
 	
+	public static List<String> GLOBAL_SYMBOLS = new ArrayList<String>();
 	public static List<String> MATH_SYMBOLS = new ArrayList<String>();	
 	public static List<String> ARB_SYMBOLS = new ArrayList<String>();
 	public static List<String> OPTIONS_SYMBOLS = new ArrayList<String>();
@@ -19,6 +20,10 @@ public class InstrumentUtilities {
 	public static List<String> EMPTY_LIST = new ArrayList<String>();
 	
 	static {
+		
+		GLOBAL_SYMBOLS.add("SNOW-E");
+		GLOBAL_SYMBOLS.add("ROBOT-E");
+		
 		MATH_SYMBOLS.add("MATH");
 		ARB_SYMBOLS.add("ARB");
 		OPTIONS_SYMBOLS.add("RAND");
@@ -79,6 +84,7 @@ public class InstrumentUtilities {
 			instruments.addAll(getUnderlyingsForCase(caze));
 			instruments.addAll(getOptionsForCase(caze));
 		}
+		instruments.addAll(GLOBAL_SYMBOLS);
 		return instruments;
 	}
 	

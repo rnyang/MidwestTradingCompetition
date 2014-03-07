@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import org.chicago.cases.CommonSignals.EndSignal;
 import org.chicago.cases.arb.ArbSignalProcessor;
 import org.chicago.cases.arb.ArbSignals.CustomerOrder;
 import org.chicago.cases.arb.ArbSignals.TopOfBookUpdate;
@@ -176,6 +177,7 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 			container.subscribeToTradeMessages();
 			container.filterOnlyMyTrades(true);
 			container.getPlaybackService().register(new ArbSignalProcessor());
+			container.getPlaybackService().register(new CommonSignalProcessor());
 			
 			implementation = getArbCaseImplementation();
 			log("ArbCase implementation detected to be " + implementation.getClass().getSimpleName());
@@ -183,6 +185,10 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 			teamDB = container.getDB(teamCode);
 			implementation.initializeAlgo(teamDB);
 
+		}
+		
+		public void onSignal(EndSignal msg) {
+			log("END signal received");
 		}
 		
 		public void onSignal(TopOfBookUpdate signal) {

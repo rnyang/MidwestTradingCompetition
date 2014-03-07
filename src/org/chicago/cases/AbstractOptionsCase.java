@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.chicago.cases.AbstractMathCase.TradeInfo;
+import org.chicago.cases.CommonSignals.EndSignal;
 import org.chicago.cases.options.OptionSignalProcessor;
 import org.chicago.cases.options.OptionSignals.ForecastMessage;
 import org.chicago.cases.options.OptionSignals.OrderRequestMessage;
@@ -57,6 +57,7 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 		private IGrid stats;
 		private IGrid market;
 		private String teamCode;
+		private double liquidationFees = 0;
 		
 		class PositionInfo {
 			
@@ -180,8 +181,8 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 			stats.set(teamCode, "underlying", positions.underlyingPosition);
 			stats.set(teamCode, "options", positions.optionsPosition);
 			
-			PositionInfo penaltyInfo = calculatePNL(penalties);
-			stats.set(teamCode, "penaltyValue", penaltyInfo.pnl);
+			//PositionInfo penaltyInfo = calculatePNL(penalties);
+			stats.set(teamCode, "fees", liquidationFees);
 			
 			Prices prices = instruments().getAllPrices(underlyingSymbol);
 			market.set(underlyingSymbol, "bid", prices.bid);
@@ -202,7 +203,7 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 		public void begin(IContainer container) {
 			super.begin(container);
 			
-			stats = container.addGrid(STAT_GRID, new String[] {"pnl", "penaltyValue", "positions", "underlying", "options", "vega", "gamma", "delta"});
+			stats = container.addGrid(STAT_GRID, new String[] {"pnl", "fees", "positions", "underlying", "options", "vega", "gamma", "delta"});
 			market = container.addGrid(MARKET_GRID, new String[] {"bid", "offer"});
 			
 			teamCode = getStringVar("Team_Code");
@@ -240,6 +241,7 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 			container.subscribeToSignals();
 			container.filterOnlyMyTrades(true);
 			container.getPlaybackService().register(new OptionSignalProcessor());
+			container.getPlaybackService().register(new CommonSignalProcessor());
 			
 			implementation = getOptionCaseImplementation();
 			log("MathCase implementation detected to be " + implementation.getClass().getSimpleName());
@@ -269,6 +271,10 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 		public void onSignal(VolUpdate msg) {
 			implementation.newVolUpdate(msg);
 			currentVol = msg.impliedVol;
+		}
+		
+		public void onSignal(EndSignal msg) {
+			log("END signal received");
 		}
 		
 		public void onSignal(ProcessPenaltyRequest msg) {
@@ -335,7 +341,7 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 				internalLog("instrument details, ask= " + optionPrices.ask + ", bid=" + optionPrices.bid + ", v=" + vega + ", g=" + gamma + ", d=" + delta);
 				
 				// Make trade
-				double priceToLiquidate = (tradeQuantity > 0) ? optionPrices.ask * 1.05 : optionPrices.bid * 0.95;
+				double priceToLiquidate = (tradeQuantity > 0) ? optionPrices.ask * 1.10 : optionPrices.bid * 0.90;
 				int roundedTradeQuantity = (int)((tradeQuantity > 0) ? Math.ceil(tradeQuantity) : Math.floor(tradeQuantity));		
 				Order.Side side = (tradeQuantity > 0) ? Order.Side.BUY : Order.Side.SELL;
 				long id = trades().manualTrade(option, roundedTradeQuantity, priceToLiquidate, side, new Date(), null, null, null, null, null, null);
@@ -344,6 +350,10 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 				recordTrade(option, roundedTradeQuantity, priceToLiquidate);
 				internalLog("liquidated " + roundedTradeQuantity + " @ " + priceToLiquidate);
 				implementation.penaltyFill(option, priceToLiquidate, roundedTradeQuantity);
+				
+				// Track penalty data
+				double originalPrice = (tradeQuantity > 0) ? optionPrices.ask : optionPrices.bid;
+				liquidationFees += roundedTradeQuantity * Math.abs((originalPrice - priceToLiquidate));
 				penalties.add(new TradeInfo(option, roundedTradeQuantity, priceToLiquidate));
 			}
 			else {
@@ -370,6 +380,10 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 				recordTrade(underlyingSymbol, tradeQuantityRounded, priceToLiquidate);
 				internalLog("liquidated " + tradeQuantityRounded + " @ " + priceToLiquidate);
 				implementation.penaltyFill(underlyingSymbol, priceToLiquidate, tradeQuantityRounded);
+				
+				// Track penalty data
+				double originalPrice = (tradeQuantity > 0) ? optionPrices.ask : optionPrices.bid;
+				liquidationFees += tradeQuantityRounded * Math.abs((originalPrice - priceToLiquidate));
 				penalties.add(new TradeInfo(underlyingSymbol, tradeQuantityRounded, priceToLiquidate));
 			}
 			else {
