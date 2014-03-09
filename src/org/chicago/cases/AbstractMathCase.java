@@ -101,6 +101,18 @@ public abstract class AbstractMathCase extends AbstractJob {
 		}
 		return pnl;
 	}
+	
+	protected double calculateFinalPNL() {
+		Prices prices = instruments().getAllPrices(underlying);
+		double pnl = 0;
+		for (TradeInfo trade : trades) {
+			double settlement = (trade.position > 0) ? prices.bid : prices.ask;
+			double cost = trade.position * trade.price;
+			double value = trade.position * settlement;
+			pnl += value - cost;
+		}
+		return pnl;
+	}
 
 	public void onTimer() {
 		statsGrid.set(teamCode, "position", position);
@@ -151,6 +163,9 @@ public abstract class AbstractMathCase extends AbstractJob {
 	
 	public void onSignal(EndSignal msg) {
 		log("END signal received");
+		double finalPNL = calculateFinalPNL();
+		double pnl = calculatePNL();
+		log("finalPNL=" + finalPNL + ", intraRound=" + pnl);
 	}
 
 	public void onMarketBidAsk(MarketBidAskMessage msg) {

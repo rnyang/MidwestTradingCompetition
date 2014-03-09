@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import org.chicago.cases.AbstractMathCase.TradeInfo;
 import org.chicago.cases.AbstractOptionsCase.PositionInfo;
 import org.chicago.cases.CommonSignals.EndSignal;
 import org.chicago.cases.arb.ArbSignalProcessor;
@@ -194,6 +195,9 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 		
 		public void onSignal(EndSignal msg) {
 			log("END signal received");
+			double finalPNL = calculateFinalPNL();
+			double pnl = calculatePNL();
+			log("finalPNL=" + finalPNL + ", intraRound=" + pnl);
 		}
 		
 		public void onSignal(TopOfBookUpdate signal) {
@@ -236,14 +240,34 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 				return false;
 			return true;
 		}
+		
+		protected double calculateFinalPNL() {
+			
+			Prices snow = instruments().getAllPrices("SNOW-E");
+			Prices robot = instruments().getAllPrices("ROBOT-E");
+			double bestBid = Math.max(snow.bid, robot.bid);
+			double bestAsk = Math.min(snow.ask, robot.ask);
+
+			double pnl = 0;
+			for (TradeInfo trade : trades) {
+				double settlement = (trade.position > 0) ? bestBid : bestAsk;
+				double cost = trade.position * trade.price;
+				double value = trade.position * settlement;
+				pnl += value - cost;
+			}
+			return pnl;
+		}
 
 		protected double calculatePNL() {
 			return calculatePNL(trades);
 		}
 
 		private double calculatePNL(List<TradeInfo> tradeSource) {
-			Prices prices = instruments().getAllPrices(myInstrument);
-			double settlement = (prices.ask + prices.bid) / 2;
+			Prices snow = instruments().getAllPrices("SNOW-E");
+			Prices robot = instruments().getAllPrices("ROBOT-E");
+			double bidAverage = ((snow.bid + robot.bid) / 2);
+			double askAverage = ((snow.ask + robot.ask) / 2);
+			double settlement = ((bidAverage + askAverage) / 2);
 			double pnl = 0;
 			for (TradeInfo trade : tradeSource) {
 				double cost = trade.position * trade.price;

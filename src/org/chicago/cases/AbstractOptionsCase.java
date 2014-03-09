@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.chicago.cases.AbstractMathCase.TradeInfo;
 import org.chicago.cases.CommonSignals.EndSignal;
 import org.chicago.cases.options.OptionSignalProcessor;
 import org.chicago.cases.options.OptionSignals.ForecastMessage;
@@ -42,16 +43,16 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 		private static final String MARKET_GRID = "OPTION_MARKET";
 		
 		private RiskMessage currentLimits;
-		private double currentUnderlying = 0;
+		protected double currentUnderlying = 0;
 		private String underlyingSymbol;
 		private int currentTime = 0;
 		protected int daysToJuneExp = 130;
 		protected int daysToMayExp = 100;
-		private double currentVol = 0;
+		protected double currentVol = 0;
 		
 		private Random random = new Random();
 		private List<String> optionList = new ArrayList<String>();
-		private Map<String, Integer> positionMap = new ConcurrentHashMap<String, Integer>();
+		protected Map<String, Integer> positionMap = new ConcurrentHashMap<String, Integer>();
 		private List<TradeInfo> trades = new ArrayList<TradeInfo>();
 		private List<TradeInfo> penalties = new ArrayList<TradeInfo>();
 		private IGrid stats;
@@ -61,10 +62,10 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 		
 		public static class PositionInfo {
 			
-			private final int positions;
-			private final int optionsPosition;
-			private final int underlyingPosition;
-			private final double pnl;
+			public final int positions;
+			public final int optionsPosition;
+			public final int underlyingPosition;
+			public final double pnl;
 			
 			private PositionInfo(int positions, int underlyingPosition, int optionsPosition, double pnl) {
 				this.pnl = pnl;
@@ -172,7 +173,7 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 		@Override
 		public void onTimer() {
 			if (currentVol == 0 || currentLimits == null) {
-				log("Not enough data to calculate stats yet...");
+				internalLog("Not enough data to calculate stats yet...");
 				return;
 			}
 			
@@ -280,6 +281,9 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 		
 		public void onSignal(EndSignal msg) {
 			log("END signal received");
+			PositionInfo finalInfo = calculateFinalPNL();
+			PositionInfo info = calculatePNL();
+			log("finalPNL=" + finalInfo.pnl + ", intraRound=" + info.pnl);
 		}
 		
 		public void onSignal(ProcessPenaltyRequest msg) {
@@ -509,6 +513,27 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 			if (idSymbol != null && (idSymbol.equals(underlyingSymbol) || optionList.contains(idSymbol)))
 				return true;
 			return false;		
+		}
+		
+		protected PositionInfo calculateFinalPNL() {
+			int positions = 0;
+			int options = 0;
+			int underlying = 0;
+			double pnl = 0;
+			for (TradeInfo trade : trades) {
+				InstrumentDetails details = instruments().getInstrumentDetails(trade.idSymbol);
+				Prices prices = instruments().getAllPrices(trade.idSymbol);
+				double settlement = (trade.position > 0) ? prices.bid : prices.ask;
+				double cost = trade.position * trade.price;
+				double value = trade.position * settlement;
+				pnl += value - cost;
+				positions += trade.position;
+				if (details.type == Type.EQUITY)
+					underlying += trade.position;
+				else
+					options += trade.position;
+			}
+			return new PositionInfo(positions, underlying, options, pnl);
 		}
 		
 		protected PositionInfo calculatePNL() {
