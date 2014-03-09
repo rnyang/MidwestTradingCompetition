@@ -22,6 +22,7 @@ public abstract class AbstractMathCase extends AbstractJob {
 	private static final long STAT_REFRESH = 500;
 	private static final String STAT_GRID = "MATH";
 	private static final String MARKET_GRID = "MATH_MARKET";
+	int receivedEvents = 0;
 	
 	
 	// ---------------- Define Case Interface and abstract method ----------------
@@ -170,8 +171,11 @@ public abstract class AbstractMathCase extends AbstractJob {
 
 	public void onMarketBidAsk(MarketBidAskMessage msg) {
 
+		long start = System.currentTimeMillis();
 		Prices prices = instruments().getAllPrices(msg.instrumentId);
+		long implStart = System.currentTimeMillis();
 		int result = implementation.newBidAsk(prices.bid, prices.ask);
+		long implStop = System.currentTimeMillis();
 
         /*--------------------------------Hanzhi Update----------------------------------------*/
         int newPosition = position + result;
@@ -179,33 +183,39 @@ public abstract class AbstractMathCase extends AbstractJob {
         	log("You have exceeded the position limits.  Your order will not be filled");
         	log("The requested amount would have put your position at " + newPosition);
             implementation.orderFilled(0,0);
-            return;
+            
         }
+        else {
 		/*--------------------------------Hanzhi Update----------------------------------------*/
 
-        if (result > 0) {
-			long id = trades().manualTrade(msg.instrumentId,
-					 result,
-					 prices.ask,
-					 com.optionscity.freeway.api.Order.Side.BUY,
-					 new Date(),
-					 null, null, null, null, null, null);
-			implementation.orderFilled(result, prices.ask);
-			trades.add(new TradeInfo(result, prices.ask));
-			position += result;
-		}
-		else if (result < 0) {
-			long id = trades().manualTrade(msg.instrumentId,
-					 result,
-					 prices.bid,
-					 com.optionscity.freeway.api.Order.Side.SELL,
-					 new Date(),
-					 null, null, null, null, null, null);
-			implementation.orderFilled(result, prices.bid);
-			trades.add(new TradeInfo(result, prices.bid));
-			position += result;
-		}
-        
+	        if (result > 0) {
+				long id = trades().manualTrade(msg.instrumentId,
+						 result,
+						 prices.ask,
+						 com.optionscity.freeway.api.Order.Side.BUY,
+						 new Date(),
+						 null, null, null, null, null, null);
+				implementation.orderFilled(result, prices.ask);
+				trades.add(new TradeInfo(result, prices.ask));
+				position += result;
+			}
+			else if (result < 0) {
+				long id = trades().manualTrade(msg.instrumentId,
+						 result,
+						 prices.bid,
+						 com.optionscity.freeway.api.Order.Side.SELL,
+						 new Date(),
+						 null, null, null, null, null, null);
+				implementation.orderFilled(result, prices.bid);
+				trades.add(new TradeInfo(result, prices.bid));
+				position += result;
+			}
+        }
+        long stop = System.currentTimeMillis();
+        receivedEvents += 1;
+        log("implementation took " + (implStop - implStart) + " ms");
+        log("onMarketBidAsk took " + (stop - start) + " ms");
+        log("I have processed " + receivedEvents + " events");
 	}
 
 	
