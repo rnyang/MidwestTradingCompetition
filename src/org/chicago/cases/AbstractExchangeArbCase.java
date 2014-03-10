@@ -380,7 +380,7 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 				if (exchange == quote.exchange) {
 					if (side == CustomerSide.CUSTOMERBUY) {
 						internalLog("Matching bidPrice of " + price + " against askPrice of " + quote.askPrice + " for exchange " + exchange);
-						if (price >= quote.askPrice) {
+						if (price >= quote.askPrice && quote.askPrice < currentMarketQuotes[exchange].askPrice) {
 							internalLog("Successful match");
 							positionCount -= DEFAULT_QUANTITY;
 							long id = trades().manualTrade(myInstrument,
@@ -400,7 +400,7 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 					}
 					else {
 						internalLog("Matching askPrice of " + price + " against bidPrice of " + quote.bidPrice);
-						if (price <= quote.bidPrice) {
+						if (price <= quote.bidPrice && quote.bidPrice > currentMarketQuotes[exchange].bidPrice) {
 							internalLog("Successful match");
 							positionCount += DEFAULT_QUANTITY;
 							long id = trades().manualTrade(myInstrument,
