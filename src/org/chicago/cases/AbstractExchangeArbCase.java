@@ -16,6 +16,7 @@ import org.chicago.cases.arb.QueueEvent;
 import org.chicago.cases.arb.QueueEvent.DelayedOrderFill;
 import org.chicago.cases.arb.QueueEvent.DelayedTopOfBook;
 import org.chicago.cases.arb.Quote;
+import org.chicago.cases.options.OrderInfo.OrderSide;
 import org.chicago.cases.utils.InstrumentUtilities;
 import org.chicago.cases.utils.InstrumentUtilities.Case;
 import org.chicago.cases.utils.TeamUtilities;
@@ -372,6 +373,20 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 		}
 		
 		private DelayedOrderFill matchAgainstOrder(CustomerOrder order) {
+			for (Quote quote : myQuotes) {
+				for (Quote marketQuote : currentMarketQuotes) {
+					if (quote.exchange == order.exchange && marketQuote.exchange == order.exchange) {
+						if (order.side == CustomerSide.CUSTOMERBUY) {
+							if (quote.askPrice > marketQuote.askPrice)
+								return null;
+						}
+						else {
+							if (quote.bidPrice < marketQuote.bidPrice)
+								return null;
+						}
+					}
+				}
+			}
 			return matchAgainstDetails(order.exchange, order.side, order.price);
 		}
 		
@@ -380,7 +395,7 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 				if (exchange == quote.exchange) {
 					if (side == CustomerSide.CUSTOMERBUY) {
 						internalLog("Matching bidPrice of " + price + " against askPrice of " + quote.askPrice + " for exchange " + exchange);
-						if (price >= quote.askPrice && quote.askPrice < currentMarketQuotes[exchange].askPrice) {
+						if (price >= quote.askPrice) {
 							internalLog("Successful match");
 							positionCount -= DEFAULT_QUANTITY;
 							long id = trades().manualTrade(myInstrument,
@@ -400,7 +415,7 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 					}
 					else {
 						internalLog("Matching askPrice of " + price + " against bidPrice of " + quote.bidPrice);
-						if (price <= quote.bidPrice && quote.bidPrice > currentMarketQuotes[exchange].bidPrice) {
+						if (price <= quote.bidPrice) {
 							internalLog("Successful match");
 							positionCount += DEFAULT_QUANTITY;
 							long id = trades().manualTrade(myInstrument,

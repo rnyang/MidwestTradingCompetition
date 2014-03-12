@@ -171,19 +171,15 @@ public abstract class AbstractMathCase extends AbstractJob {
 
 	public void onMarketBidAsk(MarketBidAskMessage msg) {
 
-		long start = System.currentTimeMillis();
 		Prices prices = instruments().getAllPrices(msg.instrumentId);
-		long implStart = System.currentTimeMillis();
 		int result = implementation.newBidAsk(prices.bid, prices.ask);
-		long implStop = System.currentTimeMillis();
 
         /*--------------------------------Hanzhi Update----------------------------------------*/
         int newPosition = position + result;
         if (newPosition > 5 || newPosition < -5){
         	log("You have exceeded the position limits.  Your order will not be filled");
         	log("The requested amount would have put your position at " + newPosition);
-            implementation.orderFilled(0,0);
-            
+            implementation.orderFilled(0,0); 
         }
         else {
 		/*--------------------------------Hanzhi Update----------------------------------------*/
@@ -211,11 +207,7 @@ public abstract class AbstractMathCase extends AbstractJob {
 				position += result;
 			}
         }
-        long stop = System.currentTimeMillis();
-        receivedEvents += 1;
-        log("implementation took " + (implStop - implStart) + " ms");
-        log("onMarketBidAsk took " + (stop - start) + " ms");
-        log("I have processed " + receivedEvents + " events");
+
 	}
 
 	

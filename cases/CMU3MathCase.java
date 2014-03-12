@@ -12,7 +12,7 @@ import com.optionscity.freeway.api.IJobSetup;
  * Your team will need to provide your own implementation of this case.
  */
 
-public class ExampleMathCaseImplementation extends AbstractMathCase implements MathCase {
+public class CMU3MathCase extends AbstractMathCase implements MathCase {
 	
 		
 		private IDB myDatabase;
@@ -37,7 +37,11 @@ public class ExampleMathCaseImplementation extends AbstractMathCase implements M
 			log("I received a new bid of " + bid + ", and ask of " + ask);
             // Receive new bid and ask
             // Input your HMM algorithm here to calculate how much to buy or sell
-            return 1;
+            if(bid<10000){
+                return 2; // This will buy 2
+            }else{
+                return -2; // This will sell 2
+            }
 		}
 
 		// For your own benefit, keep track of your own PnL too

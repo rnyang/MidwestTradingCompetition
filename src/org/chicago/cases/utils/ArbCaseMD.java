@@ -7,8 +7,8 @@ import java.io.FileWriter;
 
 public class ArbCaseMD {
 	
-	private static final String INPUT = "/home/bsandman/arbcase.csv";
-	private static final String OUTPUT = "/home/bsandman/arbcase-mod.csv";
+	private static final String INPUT = "/home/bsandman/Downloads/data-backup/arb_three.csv";
+	private static final String OUTPUT = "/home/bsandman/Downloads/data/arb_three.csv";
 	
 	public static void main(String[] args) {
 		

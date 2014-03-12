@@ -1,0 +1,1 @@
+public class CMU2MathCaseImplementation extends overfitted.MathCaseImplementation {}
