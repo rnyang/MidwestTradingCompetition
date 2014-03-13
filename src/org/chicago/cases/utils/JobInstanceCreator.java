@@ -6,7 +6,7 @@ import java.io.FileWriter;
 
 public class JobInstanceCreator {
 	
-	
+	private static final String[] JOBS = new String[] {};
 	private static final String OUTPUT = "/home/bsandman/code/uofc/cases";
 	private static final String DIR = "/home/bsandman/jobs";
 	private static final int INSTANCES = 15;

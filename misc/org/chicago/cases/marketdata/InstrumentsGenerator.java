@@ -16,7 +16,10 @@ public class InstrumentsGenerator {
 			BufferedWriter bw = new BufferedWriter(new FileWriter(FILE_PATH));
 			List<String> instruments = InstrumentUtilities.getAllInstrumentsForAllTeams();
 			for (String instrument : instruments) {
-				bw.write(instrument + ",0.01");
+				if (instrument.equals("SNOW-E") || instrument.endsWith("ROBOT-E"))
+					bw.write(instrument + ",0.25");
+				else
+					bw.write(instrument + ",0.01");
 				bw.newLine();
 			}
 			bw.flush();

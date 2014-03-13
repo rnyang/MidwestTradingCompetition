@@ -1,5 +1,6 @@
 package org.chicago.cases;
 
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -23,6 +24,7 @@ public abstract class AbstractMathCase extends AbstractJob {
 	private static final String STAT_GRID = "MATH";
 	private static final String MARKET_GRID = "MATH_MARKET";
 	int receivedEvents = 0;
+	DecimalFormat df = new DecimalFormat("##.##");
 	
 	
 	// ---------------- Define Case Interface and abstract method ----------------
@@ -69,6 +71,9 @@ public abstract class AbstractMathCase extends AbstractJob {
     private IGrid marketGrid;
     private String teamCode;
     private String underlying;
+    private double samplePositionCount = 0;
+	private double avgPosition = 0;
+	private double iterations = 0;
     private List<TradeInfo> trades = new ArrayList<TradeInfo>();
 	
 	/*
@@ -103,6 +108,10 @@ public abstract class AbstractMathCase extends AbstractJob {
 		return pnl;
 	}
 	
+	private double formatNumber(double pnl) {
+		return Double.parseDouble(df.format(pnl));
+	}
+	
 	protected double calculateFinalPNL() {
 		Prices prices = instruments().getAllPrices(underlying);
 		double pnl = 0;
@@ -116,8 +125,14 @@ public abstract class AbstractMathCase extends AbstractJob {
 	}
 
 	public void onTimer() {
-		statsGrid.set(teamCode, "position", position);
-		statsGrid.set(teamCode, "pnl", calculatePNL());
+		
+		iterations += 1;
+		avgPosition = (samplePositionCount == 0) ? 0 : ((avgPosition * (iterations - 1)) + samplePositionCount) / iterations;
+		samplePositionCount = 0;
+		
+		statsGrid.set(teamCode, "pnl", formatNumber(calculatePNL()));
+		statsGrid.set(teamCode, "position", formatNumber(position));
+		statsGrid.set(teamCode, "avgPosition", formatNumber(avgPosition));
 		
 		Prices prices = instruments().getAllPrices(underlying);
 		marketGrid.set(underlying, "bid", prices.bid);
@@ -137,7 +152,7 @@ public abstract class AbstractMathCase extends AbstractJob {
 			container.stopJob("Please set a Team_Code in the configuration");
 		if (!TeamUtilities.validateTeamCode(teamCode))
 			container.stopJob("The specified Team Code is not a valid code.  Please enter the code provided to your team.");
-		statsGrid = container.addGrid(STAT_GRID, new String[] {"position", "pnl"});
+		statsGrid = container.addGrid(STAT_GRID, new String[] {"position", "pnl", "avgPosition"});
 		marketGrid = container.addGrid(MARKET_GRID, new String[] {"bid", "offer"});
 		log("Team Code is, " + teamCode);
 		

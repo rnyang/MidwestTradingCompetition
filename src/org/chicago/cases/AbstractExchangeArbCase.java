@@ -1,5 +1,6 @@
 package org.chicago.cases;
 
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -40,6 +41,7 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 	private static final String STAT_GRID = "ARB";
 	private static final String MARKET_GRID = "ARB_MARKET";
 	private static final String QUOTE_GRID = "ARB_QUOTES";
+	DecimalFormat df = new DecimalFormat("##.##");
 	
 	// ---------------- Define Case Interface and abstract method ----------------
 		/*
@@ -126,13 +128,13 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 		public void onTimer() {
 			double pnl = calculatePNL(trades);
 			double penaltyValue = calculatePNL(penalties);
-			statGrid.set(teamCode, "pnl", pnl);
-			statGrid.set(teamCode, "positions", positionCount);
-			statGrid.set(teamCode, "liquidations", liquidations);
-			statGrid.set(teamCode, "liquidatedAmount", liquidationAmount);
-			statGrid.set(teamCode, "penaltyPnL", penaltyValue);
-			statGrid.set(teamCode, "snowFills", snowFills);
-			statGrid.set(teamCode, "robotFills", robotFills);
+			statGrid.set(teamCode, "pnl", formatNumber(pnl));
+			statGrid.set(teamCode, "positions", formatNumber(positionCount));
+			statGrid.set(teamCode, "liquidations", formatNumber(liquidations));
+			statGrid.set(teamCode, "liquidatedAmount", formatNumber(liquidationAmount));
+			statGrid.set(teamCode, "penaltyPnL", formatNumber(penaltyValue));
+			statGrid.set(teamCode, "snowFills", formatNumber(snowFills));
+			statGrid.set(teamCode, "robotFills", formatNumber(robotFills));
 			snowFills = 0;
 			robotFills = 0;
 			
@@ -152,6 +154,11 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 				}
 			}
 			
+		}
+
+
+		private double formatNumber(double pnl) {
+			return Double.parseDouble(df.format(pnl));
 		}
 
 

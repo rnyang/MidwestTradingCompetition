@@ -1,5 +1,6 @@
 package org.chicago.cases;
 
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -41,6 +42,7 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 		private static final int DAYS_PER_ROUND = 100;
 		private static final String STAT_GRID = "OPTION";
 		private static final String MARKET_GRID = "OPTION_MARKET";
+		DecimalFormat df = new DecimalFormat("##.##");
 		
 		private RiskMessage currentLimits;
 		protected double currentUnderlying = 0;
@@ -59,6 +61,12 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 		private IGrid market;
 		private String teamCode;
 		private double liquidationFees = 0;
+		private double aggregateTradeCount = 0;
+		private double tradeCount = 0;
+		private double ignoreCount = 0;
+		private double tradeQtyTotal = 0;
+		private double avgTradeSize = 0;
+		private double iterations = 0;
 		
 		public static class PositionInfo {
 			
@@ -177,18 +185,28 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 				return;
 			}
 			
+			iterations += 1;
+			avgTradeSize = (tradeCount == 0) ? 0 : ((avgTradeSize * (iterations - 1)) + (tradeQtyTotal / tradeCount)) / iterations;
+			aggregateTradeCount += tradeCount;
+			tradeQtyTotal = 0;
+			tradeCount = 0;
+			
 			PortfolioRisk risk = calculateRisk(currentUnderlying, RATE, currentVol);
 			PositionInfo positions = calculatePNL(trades);
-			stats.set(teamCode, "vega", risk.vega);
-			stats.set(teamCode, "gamma", risk.gamma);
-			stats.set(teamCode, "delta", risk.delta);
-			stats.set(teamCode, "pnl", positions.pnl);
-			stats.set(teamCode, "positions", positions.positions);
-			stats.set(teamCode, "underlying", positions.underlyingPosition);
-			stats.set(teamCode, "options", positions.optionsPosition);
+			stats.set(teamCode, "vega", formatNumber(risk.vega));
+			stats.set(teamCode, "gamma", formatNumber(risk.gamma));
+			stats.set(teamCode, "delta", formatNumber(risk.delta));
+			stats.set(teamCode, "pnl", formatNumber(positions.pnl));
+			stats.set(teamCode, "positions", formatNumber(positions.positions));
+			stats.set(teamCode, "underlying", formatNumber(positions.underlyingPosition));
+			stats.set(teamCode, "options", formatNumber(positions.optionsPosition));
+			stats.set(teamCode, "avgTradeSize", formatNumber(avgTradeSize));
+			stats.set(teamCode, "trades", formatNumber(aggregateTradeCount));
+			stats.set(teamCode, "ignores", formatNumber(ignoreCount));
+			
 			
 			//PositionInfo penaltyInfo = calculatePNL(penalties);
-			stats.set(teamCode, "fees", liquidationFees);
+			stats.set(teamCode, "fees", formatNumber(liquidationFees));
 			
 			Prices prices = instruments().getAllPrices(underlyingSymbol);
 			market.set(underlyingSymbol, "bid", prices.bid);
@@ -209,7 +227,7 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 		public void begin(IContainer container) {
 			super.begin(container);
 			
-			stats = container.addGrid(STAT_GRID, new String[] {"pnl", "fees", "positions", "underlying", "options", "vega", "gamma", "delta"});
+			stats = container.addGrid(STAT_GRID, new String[] {"pnl", "positions", "fees", "trades", "ignores", "avgTradeSize", "underlying", "options", "vega", "gamma", "delta"});
 			market = container.addGrid(MARKET_GRID, new String[] {"bid", "offer"});
 			
 			teamCode = getStringVar("Team_Code");
@@ -479,14 +497,17 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 			for (OrderInfo order : orders) {
 				if (order == null) {
 					log("Null order received, skipping...");
+					ignoreCount += 1;
 					continue;
 				}
 				else if (order.side == null || !isValidInstrument(order.idSymbol)) {
 					log("Invalid order properties, skipping");
+					ignoreCount += 1;
 					continue;
 				}
 				else if (order.quantity <= 0 || order.price <= 0) {
 					log("You must enter a positive quantity or price.  Skipping order");
+					ignoreCount += 1;
 					continue;
 				}
 				
@@ -540,6 +561,10 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 			return calculatePNL(trades);
 		}
 		
+		private double formatNumber(double pnl) {
+			return Double.parseDouble(df.format(pnl));
+		}
+		
 		protected PositionInfo calculatePNL(List<TradeInfo> tradeSource) {
 			int positions = 0;
 			int options = 0;
@@ -569,6 +594,8 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 			currentPosition += tradeQuantity;
 			positionMap.put(idSymbol, currentPosition);
 			trades.add(new TradeInfo(idSymbol, tradeQuantity, tradePrice));
+			tradeCount += 1;
+			tradeQtyTotal += Math.abs(tradeQuantity);
 		}
 		
 		private void internalLog(String message) {
