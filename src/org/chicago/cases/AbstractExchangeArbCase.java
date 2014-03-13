@@ -39,6 +39,7 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 	private static final int MAX_LONG = 200;
 	
 	private static final String STAT_GRID = "ARB";
+	private static final String DATA_GRID = "ARB_DATA";
 	private static final String MARKET_GRID = "ARB_MARKET";
 	private static final String QUOTE_GRID = "ARB_QUOTES";
 	DecimalFormat df = new DecimalFormat("##.##");
@@ -112,9 +113,11 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 		private IGrid statGrid;
 		private IGrid marketGrid;
 		private IGrid quoteGrid;
+		private IGrid dataGrid;
 		private int snowFills = 0;
 		private int robotFills = 0;
 		private String teamCode;
+		private double tradeCount = 0;
 		
 		public void install(IJobSetup setup) {
 			setup.addVariable("Team_Code", "Team Code and product to trade", "string", "");
@@ -135,12 +138,15 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 			statGrid.set(teamCode, "penaltyPnL", formatNumber(penaltyValue));
 			statGrid.set(teamCode, "snowFills", formatNumber(snowFills));
 			statGrid.set(teamCode, "robotFills", formatNumber(robotFills));
+			statGrid.set(teamCode, "trades", formatNumber(tradeCount));
 			snowFills = 0;
 			robotFills = 0;
 			
 			for (Quote quote : currentMarketQuotes) {
 				marketGrid.set(quote.exchange.name(), "bid", quote.bidPrice);
 				marketGrid.set(quote.exchange.name(), "offer", quote.askPrice);
+				dataGrid.set("bid", quote.exchange.name(), quote.bidPrice);
+				dataGrid.set("offer", quote.exchange.name(), quote.askPrice);
 			}
 			
 			for (Quote quote : myQuotes) {
@@ -150,7 +156,7 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 				}
 				else {
 					quoteGrid.set(teamCode, "robotBid", quote.bidPrice);
-					quoteGrid.set(teamCode, "robotOffer", quote.askPrice);
+					quoteGrid.set(teamCode, "robotOffer", quote.askPrice);	
 				}
 			}
 			
@@ -165,9 +171,10 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 		public void begin(IContainer container) {
 			super.begin(container);
 			
-			statGrid = container.addGrid(STAT_GRID, new String[] {"pnl", "positions", "liquidations","liquidatedAmount", "penaltyPnL", "snowFills", "robotFills"});
+			statGrid = container.addGrid(STAT_GRID, new String[] {"pnl", "positions", "trades", "liquidations","liquidatedAmount", "penaltyPnL", "snowFills", "robotFills"});
 			marketGrid = container.addGrid(MARKET_GRID, new String[] {"bid", "offer"});
 			quoteGrid = container.addGrid(QUOTE_GRID, new String[] {"snowBid", "snowOffer", "robotBid", "robotOffer"}); 
+			dataGrid = container.addGrid(DATA_GRID, new String[] {Exchange.SNOW.name(), Exchange.ROBOT.name()});
 			
 			verbose = getBooleanVar("verbose");
 			teamCode = getStringVar("Team_Code");
@@ -412,6 +419,7 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 									 new Date(),
 									 null, null, null, null, null, null);
 							trades.add(new TradeInfo(-DEFAULT_QUANTITY, quote.askPrice));
+							tradeCount += 1;
 							if (exchange == Exchange.ROBOT)
 								robotFills += 1;
 							else
@@ -432,6 +440,7 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 									 new Date(),
 									 null, null, null, null, null, null);
 							trades.add(new TradeInfo(DEFAULT_QUANTITY, quote.askPrice));
+							tradeCount += 1;
 							if (exchange == Exchange.ROBOT)
 								robotFills += 1;
 							else
