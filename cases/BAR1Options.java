@@ -170,13 +170,17 @@ public class BAR1Options extends AbstractOptionsCase implements OptionsCase {
 		double[][][][] Options = new double[10][10][10][3];
 		Matrix B = new Matrix(forecast,3);
 		double[] Mispricing = new double[10];
+		ArrayList<String> list = new ArrayList<String>();
+		list = p.data();
+		if (list.size() < 10)
+			return new OrderInfo[] {};
 		
 		for(int i = 0; i < 10; i ++){
-			String xi = p.data().get(i);
+			String xi = list.get(i);
 			for(int y = 0; y < 10; y ++){
-				String xy = p.data().get(y);
+				String xy = list.get(y);
 				for(int z = 0; z < 10; z++){
-					String xz = p.data().get(z);
+					String xz = list.get(z);
 					if(i!=y && i!=z && z!=y){
 						double[][] greeks = new double[][]{{p.round(p.Vega(xi),4),p.round(p.Vega(xy),4),p.round(p.Vega(xz),4)},
 								{p.round(p.Gamma(xi),4),p.round(p.Gamma(xy),4),p.round(p.Gamma(xz),4)},{p.round(p.Delta(xi),4),

@@ -148,6 +148,12 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 				dataGrid.set("bid", quote.exchange.name(), quote.bidPrice);
 				dataGrid.set("offer", quote.exchange.name(), quote.askPrice);
 			}
+			if (currentMarketQuotes.length >= 2 && currentMarketQuotes[0] != null && currentMarketQuotes[1] != null) {
+				double bestBid = Math.max(currentMarketQuotes[0].bidPrice, currentMarketQuotes[1].bidPrice);
+				double bestOffer = Math.min(currentMarketQuotes[0].askPrice, currentMarketQuotes[1].askPrice);
+				dataGrid.set("bid", "BEST", bestBid);
+				dataGrid.set("offer", "BEST", bestOffer);
+			}
 			
 			for (Quote quote : myQuotes) {
 				if (quote.exchange == Exchange.SNOW) {
@@ -174,7 +180,7 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 			statGrid = container.addGrid(STAT_GRID, new String[] {"pnl", "positions", "trades", "liquidations","liquidatedAmount", "penaltyPnL", "snowFills", "robotFills"});
 			marketGrid = container.addGrid(MARKET_GRID, new String[] {"bid", "offer"});
 			quoteGrid = container.addGrid(QUOTE_GRID, new String[] {"snowBid", "snowOffer", "robotBid", "robotOffer"}); 
-			dataGrid = container.addGrid(DATA_GRID, new String[] {Exchange.SNOW.name(), Exchange.ROBOT.name()});
+			dataGrid = container.addGrid(DATA_GRID, new String[] {Exchange.SNOW.name(), Exchange.ROBOT.name(), "BEST"});
 			
 			verbose = getBooleanVar("verbose");
 			teamCode = getStringVar("Team_Code");
@@ -280,9 +286,9 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 		private double calculatePNL(List<TradeInfo> tradeSource) {
 			Prices snow = instruments().getAllPrices("SNOW-E");
 			Prices robot = instruments().getAllPrices("ROBOT-E");
-			double bidAverage = ((snow.bid + robot.bid) / 2);
-			double askAverage = ((snow.ask + robot.ask) / 2);
-			double settlement = ((bidAverage + askAverage) / 2);
+			double bidAverage = ((snow.bid + robot.bid) / 2.0);
+			double askAverage = ((snow.ask + robot.ask) / 2.0);
+			double settlement = ((bidAverage + askAverage) / 2.0);
 			double pnl = 0;
 			for (TradeInfo trade : tradeSource) {
 				double cost = trade.position * trade.price;
@@ -439,7 +445,7 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 									 com.optionscity.freeway.api.Order.Side.BUY,
 									 new Date(),
 									 null, null, null, null, null, null);
-							trades.add(new TradeInfo(DEFAULT_QUANTITY, quote.askPrice));
+							trades.add(new TradeInfo(DEFAULT_QUANTITY, quote.bidPrice));
 							tradeCount += 1;
 							if (exchange == Exchange.ROBOT)
 								robotFills += 1;

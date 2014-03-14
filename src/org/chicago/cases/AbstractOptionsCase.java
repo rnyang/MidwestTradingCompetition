@@ -4,12 +4,13 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.chicago.cases.AbstractMathCase.TradeInfo;
 import org.chicago.cases.CommonSignals.EndSignal;
 import org.chicago.cases.options.OptionSignalProcessor;
 import org.chicago.cases.options.OptionSignals.ForecastMessage;
@@ -45,6 +46,7 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 		DecimalFormat df = new DecimalFormat("##.##");
 		
 		private RiskMessage currentLimits;
+		private ForecastMessage currentForecast;
 		protected double currentUnderlying = 0;
 		private String underlyingSymbol;
 		private int currentTime = 0;
@@ -59,6 +61,9 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 		private List<TradeInfo> penalties = new ArrayList<TradeInfo>();
 		private IGrid stats;
 		private IGrid market;
+		private IGrid limitGrid;
+		private IGrid forecastGrid;
+		private IGrid dataGrid;
 		private String teamCode;
 		private double liquidationFees = 0;
 		private double aggregateTradeCount = 0;
@@ -203,19 +208,34 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 			stats.set(teamCode, "avgTradeSize", formatNumber(avgTradeSize));
 			stats.set(teamCode, "trades", formatNumber(aggregateTradeCount));
 			stats.set(teamCode, "ignores", formatNumber(ignoreCount));
-			
-			
-			//PositionInfo penaltyInfo = calculatePNL(penalties);
 			stats.set(teamCode, "fees", formatNumber(liquidationFees));
+			
+			limitGrid.set("max", "vega", formatNumber(currentLimits.maxVega));
+			limitGrid.set("max", "gamma", formatNumber(currentLimits.maxGamma));
+			limitGrid.set("max", "delta", formatNumber(currentLimits.maxDelta));
+			limitGrid.set("min", "vega", formatNumber(currentLimits.minVega));
+			limitGrid.set("min", "gamma", formatNumber(currentLimits.minGamma));
+			limitGrid.set("min", "delta", formatNumber(currentLimits.minDelta));
+			
+			forecastGrid.set("current", "vega", formatNumber(currentForecast.vega));
+			forecastGrid.set("current", "gamma", formatNumber(currentForecast.gamma));
+			forecastGrid.set("current", "delta", formatNumber(currentForecast.delta));
+			forecastGrid.set("current", "impliedVol", formatNumber(currentVol));
+			//PositionInfo penaltyInfo = calculatePNL(penalties);
+			
 			
 			Prices prices = instruments().getAllPrices(underlyingSymbol);
 			market.set(underlyingSymbol, "bid", prices.bid);
 			market.set(underlyingSymbol, "offer", prices.ask);
+			dataGrid.set("bid", "market", prices.bid);
+			dataGrid.set("offer", "market", prices.ask);
 			for (String idSymbol : optionList) {
 				prices = instruments().getAllPrices(idSymbol);
 				market.set(idSymbol, "bid", prices.bid);
 				market.set(idSymbol, "offer", prices.ask);
 			}
+			
+			
 		}
 
 
@@ -229,7 +249,9 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 			
 			stats = container.addGrid(STAT_GRID, new String[] {"pnl", "positions", "fees", "trades", "ignores", "avgTradeSize", "underlying", "options", "vega", "gamma", "delta"});
 			market = container.addGrid(MARKET_GRID, new String[] {"bid", "offer"});
-			
+			limitGrid = container.addGrid("LIMIT", new String[] {"vega", "gamma", "delta"});
+			forecastGrid = container.addGrid("FORECAST", new String[] {"vega", "gamma", "delta", "impliedVol"});
+			dataGrid = container.addGrid("OPTION_DATA", new String[] {"market"});
 			teamCode = getStringVar("Team_Code");
 			verbose = getBooleanVar("verbose");
 			if (teamCode.isEmpty())
@@ -289,6 +311,7 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 		}
 		
 		public void onSignal(ForecastMessage msg) {
+			currentForecast = msg;
 			implementation.newForecastMessage(msg);
 		}
 		
@@ -493,7 +516,11 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 
 		public void onSignal(OrderRequestMessage msg) {
 			OrderInfo[] orders = implementation.placeOrders();
-			
+			Set<String> processed = new HashSet<String>();
+			int underlyingMax = 500;
+			int optionMax = 1000;
+			int underlyingCount = 0;
+			int optionCount = 0;
 			for (OrderInfo order : orders) {
 				if (order == null) {
 					log("Null order received, skipping...");
@@ -510,23 +537,43 @@ public abstract class AbstractOptionsCase extends AbstractJob {
 					ignoreCount += 1;
 					continue;
 				}
+				else if (processed.contains(order.idSymbol)) {
+					continue;
+				}
 				
-				// Get details
-				Order.Side side = (order.side == OrderSide.BUY) ? Order.Side.BUY : Order.Side.SELL;
-				Prices price = instruments().getAllPrices(order.idSymbol);
-				double tradePrice = (order.side == OrderSide.BUY) ? price.ask : price.bid;
-				int tradeQuantity = (order.side == OrderSide.BUY) ? order.quantity : -order.quantity;
+				processed.add(order.idSymbol);
 				
-				if ((side == Order.Side.BUY && order.price >= price.ask) || (side == Order.Side.SELL && order.price <= price.bid)) {
-					// Make Trade
-					long id = trades().manualTrade(order.idSymbol, order.quantity, tradePrice, side, new Date(), null, null, null, null, null, null);
-					implementation.orderFilled(order.idSymbol, tradePrice, tradeQuantity);
-					recordTrade(order.idSymbol, tradeQuantity, tradePrice);
+				boolean skip = false;
+				InstrumentDetails details = instruments().getInstrumentDetails(order.idSymbol);
+				if (details.type.isOption()) {
+					if (optionCount > optionMax)
+						skip = true;
+					optionCount += order.quantity;
 				}
 				else {
-					log("Order side=" + side.name() + ", with price=" + order.price + ", did not cross opposite market of " + tradePrice);
-				}	
-				
+					if (underlyingCount > underlyingMax)
+						skip = true;
+					underlyingCount += order.quantity; 
+				}
+
+				if (!skip) {
+					int qty = Math.min(order.quantity, 500);
+					// Get details
+					Order.Side side = (order.side == OrderSide.BUY) ? Order.Side.BUY : Order.Side.SELL;
+					Prices price = instruments().getAllPrices(order.idSymbol);
+					double tradePrice = (order.side == OrderSide.BUY) ? price.ask : price.bid;
+					int tradeQuantity = (order.side == OrderSide.BUY) ? qty : -qty;
+					
+					if ((side == Order.Side.BUY && order.price >= price.ask) || (side == Order.Side.SELL && order.price <= price.bid)) {
+						// Make Trade
+						long id = trades().manualTrade(order.idSymbol, qty, tradePrice, side, new Date(), null, null, null, null, null, null);
+						implementation.orderFilled(order.idSymbol, tradePrice, tradeQuantity);
+						recordTrade(order.idSymbol, tradeQuantity, tradePrice);
+					}
+					else {
+						log("Order side=" + side.name() + ", with price=" + order.price + ", did not cross opposite market of " + tradePrice);
+					}	
+				}
 			}
 		}
 		

@@ -23,6 +23,7 @@ public abstract class AbstractMathCase extends AbstractJob {
 	private static final long STAT_REFRESH = 500;
 	private static final String STAT_GRID = "MATH";
 	private static final String MARKET_GRID = "MATH_MARKET";
+	private static final String DATA_GRID = "MATH_DATA";
 	int receivedEvents = 0;
 	DecimalFormat df = new DecimalFormat("##.##");
 	
@@ -69,6 +70,7 @@ public abstract class AbstractMathCase extends AbstractJob {
     private int position = 0;
     private IGrid statsGrid;
     private IGrid marketGrid;
+    private IGrid dataGrid;
     private String teamCode;
     private String underlying;
     private double samplePositionCount = 0;
@@ -127,8 +129,10 @@ public abstract class AbstractMathCase extends AbstractJob {
 	public void onTimer() {
 		
 		iterations += 1;
-		avgPosition = (samplePositionCount == 0) ? 0 : ((avgPosition * (iterations - 1)) + samplePositionCount) / iterations;
-		samplePositionCount = 0;
+		
+
+		avgPosition = ((avgPosition * (iterations - 1)) + position) / iterations;
+		//samplePositionCount = 0;
 		
 		statsGrid.set(teamCode, "pnl", formatNumber(calculatePNL()));
 		statsGrid.set(teamCode, "position", formatNumber(position));
@@ -137,6 +141,9 @@ public abstract class AbstractMathCase extends AbstractJob {
 		Prices prices = instruments().getAllPrices(underlying);
 		marketGrid.set(underlying, "bid", prices.bid);
 		marketGrid.set(underlying, "offer", prices.ask);
+		
+		dataGrid.set("bid", "market", prices.bid);
+		dataGrid.set("offer", "market", prices.ask);
 		
 	}
 
@@ -154,6 +161,7 @@ public abstract class AbstractMathCase extends AbstractJob {
 			container.stopJob("The specified Team Code is not a valid code.  Please enter the code provided to your team.");
 		statsGrid = container.addGrid(STAT_GRID, new String[] {"position", "pnl", "avgPosition"});
 		marketGrid = container.addGrid(MARKET_GRID, new String[] {"bid", "offer"});
+		dataGrid = container.addGrid(DATA_GRID, new String[] {"market"});
 		log("Team Code is, " + teamCode);
 		
 		List<String> products = InstrumentUtilities.getSymbolsForTeamByCase(Case.MATH, teamCode);
@@ -209,6 +217,7 @@ public abstract class AbstractMathCase extends AbstractJob {
 				implementation.orderFilled(result, prices.ask);
 				trades.add(new TradeInfo(result, prices.ask));
 				position += result;
+				samplePositionCount += result;
 			}
 			else if (result < 0) {
 				long id = trades().manualTrade(msg.instrumentId,
@@ -220,6 +229,7 @@ public abstract class AbstractMathCase extends AbstractJob {
 				implementation.orderFilled(result, prices.bid);
 				trades.add(new TradeInfo(result, prices.bid));
 				position += result;
+				samplePositionCount += result;
 			}
         }
 
