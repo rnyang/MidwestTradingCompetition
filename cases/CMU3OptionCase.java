@@ -491,12 +491,12 @@ public class CMU3OptionCase extends AbstractOptionsCase implements OptionsCase {
 			if (quantity > 0 && asks.containsKey(symbol)) {
 				log2("trying to buy + " + symbol + " at " + asks.get(symbol));
 				realizedGains -= quantity*asks.get(symbol);
-				orders.add(new OrderInfo(symbol, OrderSide.BUY, asks.get(symbol), quantity));
+				orders.add(new OrderInfo(symbol, OrderSide.BUY, asks.get(symbol), quantity / 3));
 			}
 			else if (quantity < 0 && bids.containsKey(symbol)) {
 				log2("trying to sell + " + symbol + " at " + bids.get(symbol));
 				realizedGains += quantity*bids.get(symbol);
-				orders.add(new OrderInfo(symbol, OrderSide.SELL, bids.get(symbol), -quantity));
+				orders.add(new OrderInfo(symbol, OrderSide.SELL, bids.get(symbol), -quantity / 3));
 			}
 		}
 
@@ -518,7 +518,7 @@ public class CMU3OptionCase extends AbstractOptionsCase implements OptionsCase {
 	}
 	
 	public void penaltyFill(String idSymbol, double price, int quantity) {
-		portfolio.put(idSymbol, portfolio.get(idSymbol) + quantity);
+		//portfolio.put(idSymbol, portfolio.get(idSymbol) + quantity);
 		log2("Penalty called...oh no!");
 	}
 

@@ -76,7 +76,10 @@ public abstract class AbstractMathCase extends AbstractJob {
     private double samplePositionCount = 0;
 	private double avgPosition = 0;
 	private double iterations = 0;
+	private int tradeCount;
     private List<TradeInfo> trades = new ArrayList<TradeInfo>();
+    private static IDB tradesDB;
+	private static IDB pnlDB;
 	
 	/*
 	 * Freeway has its own events that are likely too complex for the student's to work out in one month.
@@ -162,6 +165,8 @@ public abstract class AbstractMathCase extends AbstractJob {
 		statsGrid = container.addGrid(STAT_GRID, new String[] {"position", "pnl", "avgPosition"});
 		marketGrid = container.addGrid(MARKET_GRID, new String[] {"bid", "offer"});
 		dataGrid = container.addGrid(DATA_GRID, new String[] {"market"});
+		tradesDB = container.getDB("trades");
+		pnlDB = container.getDB("pnl");
 		log("Team Code is, " + teamCode);
 		
 		List<String> products = InstrumentUtilities.getSymbolsForTeamByCase(Case.MATH, teamCode);
@@ -189,7 +194,9 @@ public abstract class AbstractMathCase extends AbstractJob {
 		log("END signal received");
 		double finalPNL = calculateFinalPNL();
 		double pnl = calculatePNL();
-		log("finalPNL=" + finalPNL + ", intraRound=" + pnl);
+		log(teamCode + ", finalPNL=" + finalPNL + ", intraRound=" + pnl);
+		pnlDB.put(teamCode, "finalPNL=" + finalPNL + ", intraRound=" + pnl + ", positions=" + position + ", trades=" + tradeCount);
+		log("writing line to DB");
 	}
 
 	public void onMarketBidAsk(MarketBidAskMessage msg) {
@@ -217,6 +224,7 @@ public abstract class AbstractMathCase extends AbstractJob {
 				implementation.orderFilled(result, prices.ask);
 				trades.add(new TradeInfo(result, prices.ask));
 				position += result;
+				tradeCount += 1;
 				samplePositionCount += result;
 			}
 			else if (result < 0) {
@@ -229,6 +237,7 @@ public abstract class AbstractMathCase extends AbstractJob {
 				implementation.orderFilled(result, prices.bid);
 				trades.add(new TradeInfo(result, prices.bid));
 				position += result;
+				tradeCount += 1;
 				samplePositionCount += result;
 			}
         }

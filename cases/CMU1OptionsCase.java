@@ -205,29 +205,29 @@ public class CMU1OptionsCase extends AbstractOptionsCase implements OptionsCase 
 			
 			OrderInfo[] orders = new OrderInfo[3];
 			if(opt1Amt>0){
-				orders[0]=new OrderInfo(opt1Name,OrderSide.BUY,globS[opt1Index][2],opt1Amt);
+				orders[0]=new OrderInfo(opt1Name,OrderSide.BUY,globS[opt1Index][2],Math.min(Math.max(opt1Amt, -2), 3));
 				ourPnl-=opt1Amt*-globS[opt1Index][2];
 			}
 			else{
-				orders[0]=new OrderInfo(opt1Name,OrderSide.SELL,globS[opt1Index][1],Math.abs(opt1Amt));	
+				orders[0]=new OrderInfo(opt1Name,OrderSide.SELL,globS[opt1Index][1],Math.abs(Math.min(Math.max(opt1Amt, -2), 2)));	
 				ourPnl+=opt1Amt*globS[opt1Index][1];
 			}
 			if(opt2Amt>0){
-				orders[1]=new OrderInfo(opt2Name,OrderSide.BUY,globS[opt2Index][2],opt2Amt);
+				orders[1]=new OrderInfo(opt2Name,OrderSide.BUY,globS[opt2Index][2],Math.min(Math.max(opt2Amt, -2), 4));
 				ourPnl-=opt1Amt*globS[opt2Index][1];
 				
 			}
 			else{
-				orders[1]=new OrderInfo(opt2Name,OrderSide.SELL,globS[opt2Index][1],Math.abs(opt2Amt));
+				orders[1]=new OrderInfo(opt2Name,OrderSide.SELL,globS[opt2Index][1],Math.abs(Math.min(Math.max(opt2Amt, -2), 2)));
 				ourPnl+=opt1Amt*globS[opt2Index][1];
 				}
 			//	orders[i] = new OrderInfo(symbol, OrderSide.BUY, 100.00, 10);
 			if(stockBought>0){
-				orders[2]=new OrderInfo(orderedSymbols.get(0),OrderSide.BUY,globStockPrice[0],(int)stockBought);
+				orders[2]=new OrderInfo(orderedSymbols.get(0),OrderSide.BUY,globStockPrice[0],(int)Math.min(Math.max(stockBought, -2), 1));
 				ourPnl-=opt1Amt*globStockPrice[0];
 				}
 			else{
-				orders[2]=new OrderInfo(orderedSymbols.get(0),OrderSide.SELL,globStockPrice[1],(int)Math.abs(stockBought));
+				orders[2]=new OrderInfo(orderedSymbols.get(0),OrderSide.SELL,globStockPrice[1],(int)Math.abs(Math.min(Math.max(stockBought, -2), 3)));
 				ourPnl+=opt1Amt*globStockPrice[1];
 				}
 			return orders;

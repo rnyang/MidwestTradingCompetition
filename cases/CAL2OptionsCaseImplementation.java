@@ -522,7 +522,7 @@ public class CAL2OptionsCaseImplementation extends AbstractOptionsCase {
 			if (c == null)
 				log("Error in penaltyFill(), c is null!");
 			
-			positions.put(idSymbol, oldQuantity + quantity);
+			//positions.put(idSymbol, oldQuantity + quantity);
 			capital -= price * quantity;
 
 			if (quantity != 0) 

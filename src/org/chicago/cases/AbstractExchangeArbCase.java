@@ -37,7 +37,8 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 	private static final int FILL_DELAY = 5;
 	private static final int MAX_SHORT = -200;
 	private static final int MAX_LONG = 200;
-	
+	private static IDB tradesDB;
+	private static IDB pnlDB;
 	private static final String STAT_GRID = "ARB";
 	private static final String DATA_GRID = "ARB_DATA";
 	private static final String MARKET_GRID = "ARB_MARKET";
@@ -181,7 +182,8 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 			marketGrid = container.addGrid(MARKET_GRID, new String[] {"bid", "offer"});
 			quoteGrid = container.addGrid(QUOTE_GRID, new String[] {"snowBid", "snowOffer", "robotBid", "robotOffer"}); 
 			dataGrid = container.addGrid(DATA_GRID, new String[] {Exchange.SNOW.name(), Exchange.ROBOT.name(), "BEST"});
-			
+			tradesDB = container.getDB("trades");
+			pnlDB = container.getDB("pnl");
 			verbose = getBooleanVar("verbose");
 			teamCode = getStringVar("Team_Code");
 			if (teamCode.isEmpty())
@@ -219,6 +221,7 @@ public abstract class AbstractExchangeArbCase extends AbstractJob {
 			double finalPNL = calculateFinalPNL();
 			double pnl = calculatePNL();
 			log("finalPNL=" + finalPNL + ", intraRound=" + pnl);
+			pnlDB.put(teamCode, "finalPNL=" + finalPNL + ", intraRound=" + pnl + ", positions=" + positionCount +", trades=" + tradeCount);
 		}
 		
 		public void onSignal(TopOfBookUpdate signal) {

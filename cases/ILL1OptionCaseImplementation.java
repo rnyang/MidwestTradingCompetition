@@ -1,6 +1,7 @@
 import java.util.*;
 
 import com.optionscity.freeway.api.InstrumentDetails;
+
 import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.commons.math3.optim.PointValuePair;
 import org.apache.commons.math3.optim.linear.*;
@@ -272,10 +273,10 @@ public class ILL1OptionCaseImplementation extends AbstractOptionsCase implements
         // Hedge delta
         long sharesToBuy = Math.round(-positionDelta) + Math.round(targets.delta);
         if (sharesToBuy < 0) {
-            orders.add(new OrderInfo(underlyingSymbol, OrderSide.SELL, bidAsks.get(underlyingSymbol).getFirst(), (int)Math.abs(sharesToBuy)));
+            orders.add(new OrderInfo(underlyingSymbol, OrderSide.SELL, bidAsks.get(underlyingSymbol).getFirst(), (int)Math.abs(Math.min(Math.max(sharesToBuy, -4), 3))));
         }
         else if (sharesToBuy > 0) {
-            orders.add(new OrderInfo(underlyingSymbol, OrderSide.BUY, bidAsks.get(underlyingSymbol).getSecond(), (int)Math.abs(sharesToBuy)));
+            orders.add(new OrderInfo(underlyingSymbol, OrderSide.BUY, bidAsks.get(underlyingSymbol).getSecond(), (int)Math.abs(Math.min(Math.max(sharesToBuy, -2), 2))));
         }
         // Now try and go short options
         for (String symbol : knownSymbols) {
@@ -285,7 +286,7 @@ public class ILL1OptionCaseImplementation extends AbstractOptionsCase implements
                 if (Math.abs(positionVega - limits.minVega) > (limits.minVega / 2)) {
                     orders.add(new OrderInfo(symbol, OrderSide.BUY, bidAsks.get(symbol).getSecond(), 1));
                 } else {
-                    orders.add(new OrderInfo(symbol, OrderSide.SELL, bidAsks.get(symbol).getFirst(), 1));
+                    orders.add(new OrderInfo(symbol, OrderSide.SELL, bidAsks.get(symbol).getFirst(), 2));
                 }
             }
         }
